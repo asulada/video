@@ -1,26 +1,34 @@
 package com.asuala.mock.controller;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.alibaba.fastjson2.JSONObject;
+import com.asuala.mock.es.Es8Client;
+import com.asuala.mock.es.entity.FileInfoEs;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.service.RecordService;
 import com.asuala.mock.utils.CacheUtils;
+import com.asuala.mock.utils.MD5Utils;
+import com.asuala.mock.vo.FileInfoReq;
 import com.asuala.mock.vo.Record;
 import com.asuala.mock.vo.UrlReq;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import static com.asuala.mock.m3u8.utils.Constant.FILESEPARATOR;
 
@@ -34,11 +42,19 @@ import static com.asuala.mock.m3u8.utils.Constant.FILESEPARATOR;
 public class MainController {
 
     private final RecordService recordService;
+    @Autowired(required = false)
+    private Es8Client es8Client;
 
     //down:
     //  directory: ""
     @Value("${down.directory:'d:\\app\\'}")
     private String downDir;
+    @Value("${down.http.salt}")
+    private String salt;
+
+    private static final List<String> fields = new ArrayList<String>() {{
+        add("name");
+    }};
 
     @PostMapping("analysis")
     public JSONObject analysis(@RequestBody UrlReq req) {
@@ -193,6 +209,83 @@ public class MainController {
         return res;
     }
 
+    @GetMapping("search")
+    public JSONObject search(@RequestParam String key, @RequestParam(defaultValue = "1") int pageNum, @RequestParam(defaultValue = "10") int pageSize) throws IOException {
+        JSONObject res = new JSONObject();
+        res.put("code", 222);
+
+        if (StringUtils.isBlank(key)) {
+            res.put("msg", "关键字为空");
+            return res;
+        }
+//        Query query = Query.of(q -> q.wildcard(w -> w.field("name").value(key)));
+        Query query = Query.of(q -> q.matchPhrase(m->m.query(key).field("name").slop(6)));
+//        Query query = Query.of(q -> q.match(m -> m.query(key).field("name")));
+        Map<String, Object> map = es8Client.complexQueryHighlight(query, FileInfoEs.class, fields, pageNum, pageSize);
+        res.put("data", map);
+        res.put("code", 200);
+        return res;
+    }
+
+    @PostMapping("saveEs")
+    public JSONObject saveEs(@RequestBody FileInfoReq req) {
+        JSONObject res = new JSONObject();
+        res.put("code", 222);
+        if (StringUtils.isBlank(req.getSign())) {
+            return res;
+        }
+        if (!MD5Utils.getSaltverifyMD5(req.getName(), salt, req.getSign())) {
+            return res;
+        }
+        if (StringUtils.isBlank(req.getName())) {
+            return res;
+        }
+        if (StringUtils.isBlank(req.getPath())) {
+            return res;
+        }
+        if (null == req.getIndex()) {
+            return res;
+        }
+        if (null == req.getId()) {
+            return res;
+        }
+        FileInfoEs fileInfoEs = convertEs(req);
+
+        es8Client.addData(fileInfoEs, false);
+        res.put("code", 200);
+        return res;
+    }
+
+    private FileInfoEs convertEs(FileInfoReq req) {
+        FileInfoEs fileInfoEs = new FileInfoEs();
+        fileInfoEs.setId(req.getId());
+        fileInfoEs.setName(req.getName());
+        fileInfoEs.setPath(req.getPath());
+        fileInfoEs.setSuffix(req.getSuffix());
+        fileInfoEs.setSize(req.getSize());
+        fileInfoEs.setChangeTime(req.getChangeTime());
+        fileInfoEs.setIndex(req.getIndex());
+        return fileInfoEs;
+    }
+
+    @PostMapping("delEs")
+    public JSONObject delEs(@RequestBody FileInfoReq req) throws IOException {
+        JSONObject res = new JSONObject();
+        res.put("code", 222);
+        if (StringUtils.isBlank(req.getSign())) {
+            return res;
+        }
+        if (!MD5Utils.getSaltverifyMD5(req.getName(), salt, req.getSign())) {
+            return res;
+        }
+        if (null == req.getId()) {
+            return res;
+        }
+
+        es8Client.delDocId(req.getId().toString(), FileInfoEs.class);
+        res.put("code", 200);
+        return res;
+    }
 
     private String getFilName(String fileName) {
         File file = new File(downDir, fileName);

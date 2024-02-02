@@ -2,6 +2,10 @@ server:
   port: 7082
 
 spring:
+  jackson:
+    # 全局json时间格式化
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
   servlet:
     multipart:
       max-file-size: 1024MB
@@ -69,11 +73,17 @@ logging:
   config: config/log4j2.xml
 
 down:
-  downRole: true
+  rebuldFlag: true
+  http:
+    salt: ${down.http.salt}
+    addUrl: ${down.http.url}/saveEs
+    delUrl: ${down.http.url}/delEs
+  downRole: false
   txtRole: true
   proxy:
     ip: 127.0.0.1
     port: 7890
+  volumeNo: "d:"
   directory: "d:\\a\\"
   directoryPage: "d:\\a\\xyz\\"
   keywordPre: "var flashvars_"
@@ -83,3 +93,10 @@ down:
     pauseSecond: 60
   search:
     pageSize: 5
+
+es:
+  port: ${es.port}
+  hostname: ${es.hostname}
+  alals: true  # 是否使用别名的方式访问
+  indexPrefix: index-
+  aliasPrefix: alias-

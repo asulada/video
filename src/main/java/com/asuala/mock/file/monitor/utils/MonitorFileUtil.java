@@ -1,17 +1,20 @@
 package com.asuala.mock.file.monitor.utils;
 
+import cn.hutool.core.io.FileUtil;
 import com.asuala.mock.file.monitor.entity.*;
-import com.asuala.mock.file.monitor.po.FileInfo;
 import com.asuala.mock.file.monitor.vo.FileTreeNode;
+import com.asuala.mock.m3u8.utils.Constant;
+import com.asuala.mock.utils.CacheUtils;
+import com.asuala.mock.vo.FileInfo;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import com.sun.jna.platform.FileMonitor;
 import com.sun.jna.platform.win32.*;
 import com.sun.jna.ptr.IntByReference;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * @description:
@@ -27,34 +30,47 @@ public class MonitorFileUtil {
     private static final int USN_DELETE_FLAG_DELETE = 0x00000001;
     private static final int outputBufferSize = 1024 * 1024 / 2;
 
-    public static void getFile(TreeMap<Long, FileTreeNode> map){
+
+    public static List<FileInfo> getFileInfo(TreeMap<Long, FileTreeNode> map, String volumeNo) {
+        Date date = new Date();
+        List<FileInfo> list = new ArrayList<>();
+//        volumeNo += Constant.FILESEPARATOR;
         for (Map.Entry<Long, FileTreeNode> entry : map.descendingMap().entrySet()) {
             StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.append("/").append(entry.getValue().getFileName());
+            stringBuilder.append(Constant.FILESEPARATOR).append(entry.getValue().getFileName());
             findPath(map, entry.getValue(), stringBuilder);
+
+            stringBuilder.insert(0, volumeNo);
             String filePath = stringBuilder.toString();
+
             File file = new File(filePath);
-            FileInfo.builder().name(entry.getValue().getFileName());
+            FileInfo.FileInfoBuilder builder = FileInfo.builder().index(CacheUtils.index).name(entry.getValue().getFileName()).path(filePath).createTime(date).changeTime(new Date(file.lastModified()));
+            if (file.isFile()) {
+                builder.size(file.length()).suffix(FileUtil.getSuffix(file));
+            }
+            list.add(builder.build());
         }
+        return list;
     }
 
     private static void findPath(TreeMap<Long, FileTreeNode> map, FileTreeNode entry, StringBuilder stringBuilder) {
         FileTreeNode parentNode = map.get(entry.getParentFileReferenceNumber());
         if (null != parentNode) {
-            stringBuilder.insert(0, parentNode.getFileName()).insert(0, "/");
+            stringBuilder.insert(0, parentNode.getFileName()).insert(0, Constant.FILESEPARATOR);
             findPath(map, parentNode, stringBuilder);
         }
     }
 
     /**
-    * @Description TODO-asuala 索引卷上所有文件并返回
-    * @param volumeNo
-    * @Return {@link TreeMap< Long, FileTreeNode>}
-    * @Date 2024-02-01
-    **/
+     * @param volumeNo
+     * @Description TODO-asuala 索引卷上所有文件并返回
+     * @Return {@link TreeMap< Long, FileTreeNode>}
+     * @Date 2024-02-01
+     **/
     public static TreeMap<Long, FileTreeNode> buildFileInfo(String volumeNo) throws Exception {
         Kernel32 kernel32 = Kernel32.INSTANCE;
-        WinNT.HANDLE hVolume = kernel32.CreateFile("\\\\.\\" + volumeNo + ":", WinNT.GENERIC_READ | WinNT.GENERIC_WRITE, WinNT.FILE_SHARE_READ | WinNT.FILE_SHARE_WRITE, null, WinNT.OPEN_EXISTING, WinNT.FILE_ATTRIBUTE_NORMAL, null);
+        //"\\\\.\\E:"
+        WinNT.HANDLE hVolume = kernel32.CreateFile("\\\\.\\" + volumeNo, WinNT.GENERIC_READ | WinNT.GENERIC_WRITE, WinNT.FILE_SHARE_READ | WinNT.FILE_SHARE_WRITE, null, WinNT.OPEN_EXISTING, WinNT.FILE_ATTRIBUTE_NORMAL, null);
         if (WinNT.INVALID_HANDLE_VALUE.equals(hVolume)) {
             log.error("Failed to open volume! code {}", kernel32.GetLastError());
             throw new Exception();
@@ -116,8 +132,8 @@ public class MonitorFileUtil {
         deleteUsnJournalData.UsnJournalID = usnJournalData.UsnJournalID;
         deleteUsnJournalData.DeleteFlags = USN_DELETE_FLAG_DELETE;
         deleteUsnJournalData.write();
-        if (kernel32.DeviceIoControl(hVolume, FSCTL_DELETE_USN_JOURNAL, deleteUsnJournalData.getPointer(), deleteUsnJournalData.size(), null, 0, resultInt, null)) {
-            log.error("删除卷失败! {}", kernel32.GetLastError());
+        if (!kernel32.DeviceIoControl(hVolume, FSCTL_DELETE_USN_JOURNAL, deleteUsnJournalData.getPointer(), deleteUsnJournalData.size(), null, 0, resultInt, null)) {
+            log.error("删除卷日志失败! {}", kernel32.GetLastError());
             throw new Exception();
         }
         kernel32.CloseHandle(hVolume);
