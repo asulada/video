@@ -2,8 +2,7 @@ package com.asuala.mock.service;
 
 import com.asuala.mock.mapper.RecordMapper;
 import com.asuala.mock.vo.Record;
-import com.asuala.mock.vo.UrlReq;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.asuala.mock.vo.req.UrlReq;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;

@@ -1,36 +1,38 @@
 package com.asuala.mock.controller;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.alibaba.fastjson2.JSONObject;
 import com.asuala.mock.es.Es8Client;
 import com.asuala.mock.es.entity.FileInfoEs;
 import com.asuala.mock.m3u8.utils.Constant;
+import com.asuala.mock.service.FileInfoService;
 import com.asuala.mock.service.RecordService;
-import com.asuala.mock.utils.CacheUtils;
+import com.asuala.mock.service.ServerService;
 import com.asuala.mock.utils.MD5Utils;
-import com.asuala.mock.vo.FileInfoReq;
+import com.asuala.mock.vo.FileInfo;
 import com.asuala.mock.vo.Record;
-import com.asuala.mock.vo.UrlReq;
+import com.asuala.mock.vo.req.FileInfoReq;
+import com.asuala.mock.vo.req.RebuildReq;
+import com.asuala.mock.vo.req.SearchReq;
+import com.asuala.mock.vo.req.UrlReq;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
-import static com.asuala.mock.m3u8.utils.Constant.FILESEPARATOR;
+import java.util.*;
 
 /**
  * @description:
@@ -39,9 +41,13 @@ import static com.asuala.mock.m3u8.utils.Constant.FILESEPARATOR;
 @RestController
 @Slf4j
 @RequiredArgsConstructor
-public class MainController {
+@ConditionalOnProperty(prefix = "down", name = "server", havingValue = "true")
+public class ServerController {
 
     private final RecordService recordService;
+    private final ServerService serverService;
+    private final FileInfoService fileInfoService;
+
     @Autowired(required = false)
     private Es8Client es8Client;
 
@@ -55,6 +61,16 @@ public class MainController {
     private static final List<String> fields = new ArrayList<String>() {{
         add("name");
     }};
+
+    @PostConstruct
+    public void init() {
+        //TODO 2022-09-18: ElasticSearch 创建索引
+        try {
+            es8Client.createIndexSettingsMappings(FileInfoEs.class);
+        } catch (Exception e) {
+            log.error("连接es创建索引失败", e);
+        }
+    }
 
     @PostMapping("analysis")
     public JSONObject analysis(@RequestBody UrlReq req) {
@@ -145,8 +161,8 @@ public class MainController {
             return res;
         }
         if (null == req.getIndex()) {
-            log.debug("没有指定分片客户端 默认: {} 文件名: {}", CacheUtils.index, req.getFileName());
-            req.setIndex(CacheUtils.index);
+            log.debug("没有指定分片客户端 默认: {} 文件名: {}", Constant.index, req.getFileName());
+            req.setIndex(Constant.index);
         }
         Record result = recordService.getLastSameFile(req);
         if (null != result) {
@@ -192,8 +208,8 @@ public class MainController {
             return res;
         }
         if (null == req.getIndex()) {
-            log.debug("没有指定分片客户端 默认: {} 文件名: {}", CacheUtils.index, req.getFileName());
-            req.setIndex(CacheUtils.index);
+            log.debug("没有指定分片客户端 默认: {} 文件名: {}", Constant.index, req.getFileName());
+            req.setIndex(Constant.index);
         }
 
         Record result = new Record();
@@ -209,19 +225,29 @@ public class MainController {
         return res;
     }
 
-    @GetMapping("search")
-    public JSONObject search(@RequestParam String key, @RequestParam(defaultValue = "1") int pageNum, @RequestParam(defaultValue = "10") int pageSize) throws IOException {
+    @PostMapping("search")
+    public JSONObject search(@RequestBody SearchReq req) throws IOException {
         JSONObject res = new JSONObject();
         res.put("code", 222);
 
-        if (StringUtils.isBlank(key)) {
+        if (StringUtils.isBlank(req.getKey())) {
             res.put("msg", "关键字为空");
             return res;
         }
+        Page<FileInfo> page = new Page<>(req.getPageNum(), req.getPageSize());
+        List<FileInfo> list = fileInfoService.list(page, new LambdaQueryWrapper<FileInfo>().likeRight(FileInfo::getName, req.getKey()).orderByDesc(FileInfo::getChangeTime));
+        if (list.size() > 0) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("list", list);
+            result.put("total", page.getTotal());
+            res.put("data", result);
+            res.put("code", 200);
+            return res;
+        }
 //        Query query = Query.of(q -> q.wildcard(w -> w.field("name").value(key)));
-        Query query = Query.of(q -> q.matchPhrase(m->m.query(key).field("name").slop(6)));
+        Query query = Query.of(q -> q.matchPhrase(m -> m.query(req.getKey()).field("name").slop(6)));
 //        Query query = Query.of(q -> q.match(m -> m.query(key).field("name")));
-        Map<String, Object> map = es8Client.complexQueryHighlight(query, FileInfoEs.class, fields, pageNum, pageSize);
+        Map<String, Object> map = es8Client.complexQueryHighlight(query, FileInfoEs.class, fields, req.getPageNum(), req.getPageSize());
         res.put("data", map);
         res.put("code", 200);
         return res;
@@ -285,6 +311,26 @@ public class MainController {
         es8Client.delDocId(req.getId().toString(), FileInfoEs.class);
         res.put("code", 200);
         return res;
+    }
+
+    @PostMapping("rebuildData")
+    public void rebuildData(@RequestBody RebuildReq req) throws IOException {
+        if (StringUtils.isBlank(req.getSign())) {
+            return;
+        }
+        if (null == req.getIndex()) {
+            return;
+        }
+        if (!MD5Utils.getSaltverifyMD5(req.getIndex().toString(), salt, req.getSign())) {
+            return;
+        }
+        new Thread(() -> {
+            try {
+                serverService.rebuildData(req);
+            } catch (IOException e) {
+                log.error("重构文件数据失败 index: {}", req.getIndex(), e);
+            }
+        }).start();
     }
 
     private String getFilName(String fileName) {

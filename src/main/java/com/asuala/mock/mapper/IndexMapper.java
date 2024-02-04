@@ -1,11 +1,11 @@
 package com.asuala.mock.mapper;
-import java.util.Date;
 
 import com.asuala.mock.vo.Index;
-import java.util.List;
-
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.Date;
+import java.util.List;
 
 public interface IndexMapper extends BaseMapper<Index> {
     int deleteByPrimaryKey(Long id);

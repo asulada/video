@@ -3,10 +3,10 @@ package com.asuala.mock.es;
 import cn.hutool.core.util.IdUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.Time;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
 import co.elastic.clients.elasticsearch.cat.aliases.AliasesRecord;
 import co.elastic.clients.elasticsearch.cat.indices.IndicesRecord;
 import co.elastic.clients.elasticsearch.core.*;
@@ -24,6 +24,7 @@ import com.asuala.mock.es.annotation.DocId;
 import com.asuala.mock.es.annotation.EsClass;
 import com.asuala.mock.es.annotation.EsField;
 import com.asuala.mock.es.entity.FileInfoEs;
+import com.asuala.mock.es.entity.TimeValue;
 import com.asuala.mock.es.enums.EsDataType;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
@@ -47,7 +48,7 @@ import java.util.stream.Collectors;
  * @description:
  * @create: 2022/09/18
  **/
-@ConditionalOnProperty(prefix = "down", name = "downRole", havingValue = "false")
+@ConditionalOnProperty(prefix = "down", name = "server", havingValue = "true")
 @Component
 @Slf4j
 public class Es8Client {
@@ -81,6 +82,22 @@ public class Es8Client {
     }
 
     public void afterPropertiesSet() throws Exception {
+        /**
+         restClient = RestClient.builder(
+         new HttpHost(GSConstants.P_ES_HOST, GSConstants.P_ES_PORT, "http"))
+         .setMaxRetryTimeoutMillis(TIMEOUT)
+         .setHttpClientConfigCallback(new HttpClientConfigCallback(){
+        @Override public HttpAsyncClientBuilder customizeHttpClient(
+        HttpAsyncClientBuilder httpClientBuilder) {
+        RequestConfig.Builder requestConfigBuilder = RequestConfig.custom()
+        .setConnectTimeout(5*60*1000)//超时时间5分钟
+        .setSocketTimeout(5*60*1000)//这就是Socket超时时间设置
+        .setConnectionRequestTimeout(DEFAULT_CONNECTION_REQUEST_TIMEOUT_MILLIS);
+        httpClientBuilder.setDefaultRequestConfig(requestConfigBuilder.build());
+        return httpClientBuilder;
+        }
+        }).build();
+         **/
         RestClient restClient = RestClient.builder(new HttpHost(hostname, prot)).build();
         ElasticsearchTransport transport =
                 new RestClientTransport(restClient, new JacksonJsonpMapper());
@@ -110,10 +127,24 @@ public class Es8Client {
         int shards = annotation.shards();
         int replicas = annotation.replicas();
         StringBuilder stringBuilder = new StringBuilder("{");
+        /**
+         {
+         "settings": {
+         "analysis": {
+         "analyzer": {
+         "ngram_analyzer": {
+         "tokenizer": "ngram_tokenizer",
+         "filter": ["lowercase"]
+         }
+         }
+         }
+         }
+         }
+         **/
         stringBuilder.append("\"settings\": {\"index.max_ngram_diff\": 10,\"number_of_shards\": "
-                        + shards
-                        + ", \"number_of_replicas\": "
-                        + replicas + ",\"analysis\": {\"tokenizer\": {\"ngram_tokenizer\": {\"type\": \"ngram\",\"min_gram\": 1,\"max_gram\": 10,\"token_chars\": [\"letter\",\"digit\"]}},\"analyzer\": {\"ngram_analyzer\": { \"type\": \"custom\",\"tokenizer\": \"ngram_tokenizer\"}},}},");
+                + shards
+                + ", \"number_of_replicas\": "
+                + replicas + ",\"analysis\": {\"tokenizer\": {\"ngram_tokenizer\": {\"type\": \"ngram\",\"min_gram\": 1,\"max_gram\": 10,\"token_chars\": [\"letter\",\"digit\"]}},\"analyzer\": {\"ngram_analyzer\": { \"type\": \"custom\",\"tokenizer\": \"ngram_tokenizer\",\"filter\":[\"lowercase\"]}},}},");
         stringBuilder.append("\"mappings\": {  \"properties\": ");
         JSONObject jsonObject = new JSONObject();
         for (Field declaredField : tClass.getDeclaredFields()) {
@@ -293,10 +324,10 @@ public class Es8Client {
             builder.withJson(new StringReader(JSONObject.toJSONString(o)));
 
             if (async) {
-                asyncClient.update(builder.build(),FileInfoEs.class);
+                asyncClient.update(builder.build(), FileInfoEs.class);
                 return null;
             }
-            response = client.update(builder.build(),FileInfoEs.class);
+            response = client.update(builder.build(), FileInfoEs.class);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -420,11 +451,11 @@ public class Es8Client {
                         .query(query)
                         .highlight(of)
                         .size(pageSize)
-                        .from(pageNum - 1)
+                        .from((pageNum - 1) * pageSize)
                 , clazz
         );
 
-        List<Object> list = new ArrayList< >();
+        List<Object> list = new ArrayList<>();
 
         for (Hit<T> hit : response.hits().hits()) {
             FileInfoEs source = ((FileInfoEs) hit.source());
@@ -447,7 +478,7 @@ public class Es8Client {
     //根据查询进行删除
     public <T> void delQuery(Query query, Class<T> clazz) throws IOException {
         String index = getClassAlalsOrIndex(clazz);
-        DeleteByQueryRequest de = DeleteByQueryRequest.of(d -> d.index(index).query(query));
+        DeleteByQueryRequest de = DeleteByQueryRequest.of(d -> d.index(index).query(query).timeout(Time.of(a -> a.time(TimeValue.timeValueMillis(5).toString()))));
         client.deleteByQuery(de);
     }
 

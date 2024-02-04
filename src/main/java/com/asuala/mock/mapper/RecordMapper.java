@@ -1,7 +1,7 @@
 package com.asuala.mock.mapper;
 
 import com.asuala.mock.vo.Record;
-import com.asuala.mock.vo.UrlReq;
+import com.asuala.mock.vo.req.UrlReq;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;

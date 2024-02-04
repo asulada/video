@@ -17,7 +17,6 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class CacheUtils {
 
-    public static int index;
 
     //缓存过期时间 单位 s
     public static final int expireTime = 120;

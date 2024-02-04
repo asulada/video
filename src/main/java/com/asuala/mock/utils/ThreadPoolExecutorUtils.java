@@ -12,12 +12,12 @@ public class ThreadPoolExecutorUtils {
     /**
      * default value
      */
-    private static int corePoolSite = 2;
+    private static int corePoolSite = 4;
     private static int maxPoolSite = 10;
     private static int queueCapacity = 500;
     private static Long keepAliveTime = 1L;
 
-    public static volatile ThreadPoolExecutor threadPoolExecutorInstance = null;
+    private static volatile ThreadPoolExecutor threadPoolExecutorInstance = null;
 
     private ThreadPoolExecutorUtils() {}
     // 自定义线程池参数

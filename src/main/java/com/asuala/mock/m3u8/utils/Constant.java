@@ -1,5 +1,8 @@
 package com.asuala.mock.m3u8.utils;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * 常量
  *
@@ -9,6 +12,10 @@ package com.asuala.mock.m3u8.utils;
  */
 
 public class Constant {
+
+    public static int index;
+
+    public static Set<String> volumeNos = new HashSet<>();
 
     //文件分隔符，在window中为\\，在linux中为/
     public static final String FILESEPARATOR = System.getProperty("file.separator");

@@ -9,7 +9,6 @@ import com.asuala.mock.m3u8.utils.StringUtils;
 import com.asuala.mock.service.RecordPageService;
 import com.asuala.mock.service.RecordService;
 import com.asuala.mock.task.CommonTask;
-import com.asuala.mock.utils.AnalysisDownUrlUtils;
 import com.asuala.mock.utils.CacheUtils;
 import com.asuala.mock.utils.ThreadPoolExecutorUtils;
 import com.asuala.mock.vo.FixedLengthQueue;

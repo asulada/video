@@ -1,16 +1,12 @@
 package com.asuala.mock.service;
 
+import com.asuala.mock.mapper.IndexMapper;
+import com.asuala.mock.vo.Index;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
-
-import com.asuala.mock.mapper.IndexMapper;
-
 import java.util.Date;
 import java.util.List;
-
-import com.asuala.mock.vo.Index;
 
 @Service
 public class IndexService extends ServiceImpl<IndexMapper, Index> {

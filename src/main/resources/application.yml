@@ -11,7 +11,7 @@ spring:
       max-file-size: 1024MB
       max-request-size: 1024MB
   datasource:
-    url: ${jdbc.url}
+    url: ${jdbc.url}/video?useSSL=false&rewriteBatchedStatements=true&allowMultiQueries=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=UTF8
     username: ${jdbc.username}
     password: ${jdbc.password}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -53,7 +53,7 @@ mybatis-plus:
     #MyBatis 自动映射时未知列或未知属性处理策略 NONE：不做任何处理 (默认值), WARNING：以日志的形式打印相关警告信息, FAILING：当作映射失败处理，并抛出异常和详细信息
     auto-mapping-unknown-column-behavior: warning
     # 单个SQL执行超时时间(含insert,delete,select)，一般应用不宜过长，单位秒
-    default-statement-timeout: 5
+    default-statement-timeout: 120
   global-config:
     banner: false
     db-config:
@@ -73,19 +73,19 @@ logging:
   config: config/log4j2.xml
 
 down:
-  rebuldFlag: true
+  server: true
+  client: true
+  txtRole: true
   http:
     salt: ${down.http.salt}
     addUrl: ${down.http.url}/saveEs
     delUrl: ${down.http.url}/delEs
-  downRole: false
-  txtRole: true
+    rebuildUrl: ${down.http.url}/rebuildData
   proxy:
     ip: 127.0.0.1
     port: 7890
-  volumeNo: "d:"
   directory: "d:\\a\\"
-  directoryPage: "d:\\a\\xyz\\"
+  directoryPage: "d:\\app\\xyz\\"
   keywordPre: "var flashvars_"
   task:
     num: 1
@@ -93,6 +93,11 @@ down:
     pauseSecond: 60
   search:
     pageSize: 5
+
+watch:
+  dir: "d:\\a\\,e:\\a\\"
+  rebuldFlag: false
+  deleteLimit: 2000000
 
 es:
   port: ${es.port}

@@ -1,8 +1,8 @@
 package com.asuala.mock.task;
 
+import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.service.IndexService;
 import com.asuala.mock.service.RecordPageService;
-import com.asuala.mock.utils.CacheUtils;
 import com.asuala.mock.vo.Index;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -23,7 +22,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "down", name = "downRole", havingValue = "false")
+@ConditionalOnProperty(prefix = "down", name = "server", havingValue = "true")
 public class ServerTask {
 
     private final RecordPageService recordPageService;
@@ -41,8 +40,8 @@ public class ServerTask {
         LocalDateTime now = LocalDateTime.now();
         List<Index> list = indexService.list(new LambdaQueryWrapper<Index>().ge(Index::getUpdateTime, now.minusMinutes(40).format(formatter)));
         if (list.size() > 0) {
-            CacheUtils.index = Math.toIntExact(list.get(0).getId());
-            log.debug("客户端信息 {}", CacheUtils.index);
+            Constant.index = Math.toIntExact(list.get(0).getId());
+            log.debug("客户端信息 {}", Constant.index);
         } else {
             log.error("没有取到存活的客户端信息 !!!");
         }

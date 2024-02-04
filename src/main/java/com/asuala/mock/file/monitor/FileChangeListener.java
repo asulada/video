@@ -3,18 +3,15 @@ package com.asuala.mock.file.monitor;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
-import com.asuala.mock.es.Es8Client;
 import com.asuala.mock.file.monitor.enums.FileChangeEventEnum;
+import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.mapper.FileInfoMapper;
-import com.asuala.mock.utils.CacheUtils;
 import com.asuala.mock.utils.MD5Utils;
 import com.asuala.mock.vo.FileInfo;
-import com.asuala.mock.vo.FileInfoReq;
+import com.asuala.mock.vo.req.FileInfoReq;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.sun.jna.platform.FileMonitor;
 import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -31,6 +28,7 @@ public class FileChangeListener implements FileMonitor.FileListener {
 
     private FileInfoMapper fileInfoMapper;
 
+    private String dir;
     private String addUrl;
     private String delUrl;
     private String salt;
@@ -39,6 +37,9 @@ public class FileChangeListener implements FileMonitor.FileListener {
 
     @Override
     public void fileChanged(FileMonitor.FileEvent e) {
+        if (!e.getFile().getAbsolutePath().startsWith(dir)) {
+            return;
+        }
         FileChangeEventEnum eventEnum = FileChangeEventEnum.convert(e.getType());
         File file = e.getFile();
         FileInfo fileInfo = null;
@@ -52,7 +53,7 @@ public class FileChangeListener implements FileMonitor.FileListener {
                     if (null == fileInfo) {
                         log.warn("{} 修改文件事件-没有文件", file.getName());
                         insert(file);
-                    }else {
+                    } else {
                         fileInfo.setSize(file.length());
                         fileInfo.setCreateTime(new Date(file.lastModified()));
                         fileInfo.setUpdateTime(new Date());
@@ -67,7 +68,12 @@ public class FileChangeListener implements FileMonitor.FileListener {
                 break;
             case FILE_NAME_CHANGED_NEW:
                 if (null != tmpFile) {
-                    fileInfo.setSuffix(FileUtil.getSuffix(file));
+                    String suffix = FileUtil.getSuffix(file);
+                    if (suffix.length() > 0) {
+                        log.warn("文件后缀名过长: {}", file.getAbsolutePath());
+                        break;
+                    }
+                    fileInfo.setSuffix(suffix);
                     fileInfo.setName(file.getName());
                     fileInfo.setPath(file.getAbsolutePath());
                     fileInfo.setChangeTime(new Date(file.lastModified()));
@@ -101,7 +107,7 @@ public class FileChangeListener implements FileMonitor.FileListener {
     }
 
     private FileInfo findFileInfo(File file) {
-        List<FileInfo> list = fileInfoMapper.selectList(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getName, file.getName()).eq(FileInfo::getIndex, CacheUtils.index));
+        List<FileInfo> list = fileInfoMapper.selectList(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getName, file.getName()).eq(FileInfo::getIndex, Constant.index));
         FileInfo fileInfo = null;
         for (FileInfo info : list) {
             if (info.getPath().equals(file.getAbsolutePath())) {
@@ -113,9 +119,14 @@ public class FileChangeListener implements FileMonitor.FileListener {
     }
 
     private void insert(File file) {
-        FileInfo.FileInfoBuilder builder = FileInfo.builder().name(file.getName()).path(file.getAbsolutePath()).createTime(new Date()).index(CacheUtils.index).changeTime(new Date(file.lastModified()));
+        FileInfo.FileInfoBuilder builder = FileInfo.builder().name(file.getName()).path(file.getAbsolutePath()).createTime(new Date()).index(Constant.index).changeTime(new Date(file.lastModified()));
         if (file.isFile()) {
-            builder.size(file.length()).suffix(FileUtil.getSuffix(file)).dir(0);
+            String suffix = FileUtil.getSuffix(file);
+            if (suffix.length() > 20) {
+                log.warn("文件后缀名过长: {}", file.getAbsolutePath());
+                return;
+            }
+            builder.size(file.length()).suffix(suffix).dir(0);
         } else {
             builder.dir(1);
         }
@@ -137,8 +148,8 @@ public class FileChangeListener implements FileMonitor.FileListener {
         req.setSign(MD5Utils.getSaltMD5(fileInfo.getName(), salt));
         try {
             HttpUtil.post(addUrl, JSON.toJSONString(req));
-        }catch (Exception e){
-            log.error("发送es请求失败 文件id: {}",fileInfo.getId());
+        } catch (Exception e) {
+            log.error("发送es请求失败 文件id: {}", fileInfo.getId());
         }
     }
 
@@ -148,8 +159,8 @@ public class FileChangeListener implements FileMonitor.FileListener {
         req.setSign(MD5Utils.getSaltMD5(fileInfo.getName(), salt));
         try {
             HttpUtil.post(delUrl, JSON.toJSONString(req));
-        }catch (Exception e){
-            log.error("发送es请求失败 文件id: {}",fileInfo.getId());
+        } catch (Exception e) {
+            log.error("发送es请求失败 文件id: {}", fileInfo.getId());
         }
     }
 }

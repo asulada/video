@@ -1,4 +1,4 @@
-package com.asuala.mock.vo;
+package com.asuala.mock.vo.req;
 
 import lombok.Data;
 

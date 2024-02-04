@@ -1,13 +1,13 @@
 package com.asuala.mock.vo;
 
-import java.util.Date;
-
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Date;
 
 @Data
 @Builder
@@ -34,4 +34,9 @@ public class Index {
     private Date createTime;
     private Date updateTime;
     private Integer delFlag;
+
+    @TableField(exist = false)
+    private Long nextUsn;
+    @TableField(exist = false)
+    private String volumeNo;
 }

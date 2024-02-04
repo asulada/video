@@ -26,8 +26,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.asuala.mock.m3u8.utils.Constant.FILESEPARATOR;
-
 /**
  * @description:
  * @create: 2024/01/14
@@ -35,7 +33,7 @@ import static com.asuala.mock.m3u8.utils.Constant.FILESEPARATOR;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "down", name = "downRole", havingValue = "true")
+@ConditionalOnProperty(prefix = "down", name = "client", havingValue = "true")
 public class CommonTask {
     private final RecordService recordService;
     private final RecordPageService recordPageService;
@@ -160,7 +158,7 @@ public class CommonTask {
 
     private void getList(int pageNow, long time, List<Record> list, List<Long> deleteIds) {
         Page<Record> page = new Page<>(pageNow++, pageSize);
-        Page<Record> recordPage = recordService.page(page, new LambdaQueryWrapper<Record>().eq(Record::getState, 0).eq(Record::getIndex, CacheUtils.index).gt(Record::getId, CacheUtils.setLastId(null)).orderByAsc(Record::getId));
+        Page<Record> recordPage = recordService.page(page, new LambdaQueryWrapper<Record>().eq(Record::getState, 0).eq(Record::getIndex, Constant.index).gt(Record::getId, CacheUtils.setLastId(null)).orderByAsc(Record::getId));
 
         if (recordPage.getRecords().size() == 0) {
             return;
@@ -231,7 +229,7 @@ public class CommonTask {
         List<Record> list = new ArrayList<>();
         while (num < 5) {
             Page<Record> page = new Page<>(pageNow++, 5);
-            List<Record> recordPage = recordService.pagePageUrl(page, CacheUtils.index);
+            List<Record> recordPage = recordService.pagePageUrl(page, Constant.index);
             if (recordPage.size() == 0) {
                 break;
             }
@@ -253,6 +251,6 @@ public class CommonTask {
 
     @Scheduled(cron = "0 0/20 * * * ?")
     public void exsit() {
-        indexService.updateUpdateTimeById(CacheUtils.index);
+        indexService.updateUpdateTimeById(Constant.index);
     }
 }
