@@ -73,7 +73,7 @@ logging:
   config: config/log4j2.xml
 
 down:
-  server: true
+  server: false
   client: true
   txtRole: true
   http:

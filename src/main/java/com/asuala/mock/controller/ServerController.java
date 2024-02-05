@@ -110,13 +110,18 @@ public class ServerController {
             res.put("msg", "名称为空");
             return res;
         }
+        if (StringUtils.isBlank(req.getAuthor())) {
+            res.put("msg", "作者为空");
+            return res;
+        }
         req.setFileName(req.getFileName().trim());
-        List<Record> list = recordService.list(new LambdaQueryWrapper<Record>().eq(Record::getName, req.getFileName()).eq(Record::getAuthor, req.getAuthor()));
+
+        List<String> list = recordService.findQualityByAuthorAndName(req.getAuthor(),req.getFileName());
         if (list.size() > 0) {
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append("已有");
-            for (Record record : list) {
-                stringBuilder.append(" ").append(record.getQuality());
+            for (String record : list) {
+                stringBuilder.append(" ").append(record);
             }
             stringBuilder.append(" 任务");
             res.put("msg", stringBuilder.toString());

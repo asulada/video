@@ -38,19 +38,24 @@ public class RecordService extends ServiceImpl<RecordMapper, Record> {
 //        baseMapper.updateById(record);
     }
 
+
+    public List<String> findQualityByAuthorAndName(String author, String name) {
+        return baseMapper.findQualityByAuthorAndName(author, name);
+    }
+
     public Record getLastSameFile(UrlReq req) {
         return baseMapper.findLastSameFile(req);
     }
 
-    public void updateByPrimaryKeySelective(Record record){
+    public void updateByPrimaryKeySelective(Record record) {
         baseMapper.updateByPrimaryKeySelective(record);
     }
 
     public List<Record> pagePageUrl(Page<Record> page, int index) {
-        return baseMapper.pagePageUrl(page,index);
+        return baseMapper.pagePageUrl(page, index);
     }
 
-    public void updateBatchSelective(List<Record> list){
+    public void updateBatchSelective(List<Record> list) {
         baseMapper.updateBatchSelective(list);
     }
 }

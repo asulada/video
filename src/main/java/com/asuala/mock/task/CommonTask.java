@@ -86,11 +86,12 @@ public class CommonTask {
         flag = false;
         List<Record> list = new ArrayList<>();
         List<Long> deleteIds = new ArrayList<>();
-        getList(1, new Date().getTime() - 60000 * 59, list, deleteIds);
-        if (deleteIds.size() > 0) {
-            recordService.removeByIds(deleteIds);
-        }
+
         try {
+            getList(1, new Date().getTime() - 60000 * 59, list, deleteIds);
+            if (deleteIds.size() > 0) {
+                recordService.removeByIds(deleteIds);
+            }
             if (downloads.size() == 0) {
                 CacheUtils.setLastId(CacheUtils.setLastId(null));
             }

@@ -31,4 +31,7 @@ public interface RecordMapper extends BaseMapper<Record> {
 
     List<Record> pagePageUrl(Page<Record> page, @Param("index") int index);
 
+    List<String> findQualityByAuthorAndName(@Param("author")String author,@Param("name")String name);
+
+
 }
