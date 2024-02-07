@@ -1,5 +1,6 @@
 package com.asuala.mock.m3u8.download;
 
+import cn.hutool.core.io.FileUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.asuala.mock.m3u8.Exception.M3u8Exception;
 import com.asuala.mock.m3u8.listener.DownloadListener;
@@ -112,6 +113,7 @@ public class M3u8DownloadFactory {
 
         //合并后的视频文件名称
         private String fileName;
+        private String picUrl;
 
         //已完成ts片段个数
         private AtomicInteger finishedCount = new AtomicInteger(0);
@@ -301,6 +303,7 @@ public class M3u8DownloadFactory {
                     //开始合并视频
                     mergeTs();
                     log.info("视频合并完成!《{}》", fileName);
+                    downPic();
                     //删除多余的ts片段
                     deleteFiles();
                     recordService.success(id);
@@ -328,6 +331,53 @@ public class M3u8DownloadFactory {
 //            startListener(fixedThreadPool);
 //            startListener();
 //            return fixedThreadPool;
+        }
+
+        private void downPic() {
+            StringBuilder builder = new StringBuilder();
+            builder.append(dir).append(FILESEPARATOR).append(fileName).append(".jpg");
+            File file = new File(builder.toString());
+            if (!file.exists()) {
+                HttpURLConnection httpURLConnection = null;
+                try {
+//                    file.createNewFile();
+                    URL url = new URL(picUrl);
+                    if (proxy == null) {
+                        httpURLConnection = (HttpURLConnection) url.openConnection();
+                    } else {
+                        httpURLConnection = (HttpURLConnection) url.openConnection(proxy);
+                    }
+                    httpURLConnection.setConnectTimeout((int) timeoutMillisecond);
+                    for (Map.Entry<String, Object> entry : requestHeaderMap.entrySet())
+                        httpURLConnection.addRequestProperty(entry.getKey(), entry.getValue().toString());
+                    httpURLConnection.setUseCaches(false);
+                    httpURLConnection.setReadTimeout((int) timeoutMillisecond);
+                    httpURLConnection.setDoInput(true);
+
+                    int resCode = httpURLConnection.getResponseCode();
+                    if (resCode == 200) {
+                        try (OutputStream out = new FileOutputStream(file)) {
+                            //创建缓冲区
+                            byte[] buff = new byte[4096];
+                            int n;
+                            // 开始读取
+                            while ((n = httpURLConnection.getInputStream().read(buff)) >= 0) {
+                                out.write(buff, 0, n);
+                            }
+                        }
+                    } else {
+                        log.error("图片下载失败, code :{} : {}", resCode, picUrl);
+                    }
+                } catch (Exception e) {
+                    log.error("图片下载失败: {}", picUrl);
+                } finally {
+                    if (null != httpURLConnection) {
+                        httpURLConnection.disconnect();
+                    }
+                }
+            }
+
+
         }
 
 
@@ -365,7 +415,6 @@ public class M3u8DownloadFactory {
                     file = new File(builder.append("-").append(i).toString() + ".mp4");
                     if (!file.exists()) {
                         log.warn("视频名称: {}", file.getName());
-
                         break;
                     }
                 }
@@ -573,6 +622,7 @@ public class M3u8DownloadFactory {
             shutdownNow();
             CacheUtils.cache(fileName, LocalDateTime.now());
             CommonTask.downloads.remove(fileName);
+//            CacheUtils.removeCacheRecord(id);
         }
 
         private void downFuture(String urls, int i, FixedLengthQueue session) {

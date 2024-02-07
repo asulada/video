@@ -33,5 +33,13 @@ public interface RecordMapper extends BaseMapper<Record> {
 
     List<String> findQualityByAuthorAndName(@Param("author")String author,@Param("name")String name);
 
+    Long findIdByNameAndAuthor(@Param("name")String name,@Param("author")String author);
+
+    List<String> findIdGroupByNameAndAuthor();
+
+    List<Record> findByIdAndState(@Param("id")Long id,@Param("state")Integer state);
+
+	Long countByNameAndAuthorAndIdNot(@Param("name")String name,@Param("author")String author,@Param("notId")Long notId);
+
 
 }

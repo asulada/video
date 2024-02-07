@@ -116,7 +116,7 @@ public class ServerController {
         }
         req.setFileName(req.getFileName().trim());
 
-        List<String> list = recordService.findQualityByAuthorAndName(req.getAuthor(),req.getFileName());
+        List<String> list = recordService.findQualityByAuthorAndName(req.getAuthor(), req.getFileName());
         if (list.size() > 0) {
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append("已有");
@@ -156,6 +156,10 @@ public class ServerController {
             res.put("msg", "作者为空");
             return res;
         }
+        if (StringUtils.isBlank(req.getPicUrl())) {
+            res.put("msg", "图片为空");
+            return res;
+        }
 //        File file = new File(downDir + req.getAuthor() + Constant.FILESEPARATOR +"+ req.getFileName() + ".mp4");
 //        if (file.exists()) {
 //            res.put("msg", "文件已存在");
@@ -176,6 +180,7 @@ public class ServerController {
             result.setDelFlag(0);
             result.setPageUrl(req.getPageUrl());
             result.setIndex(req.getIndex());
+            result.setPicUrl(req.getPicUrl());
             recordService.updateByPrimaryKeySelective(result);
         } else {
             //        down(req.getFileName(),req.getUrl());
@@ -188,6 +193,7 @@ public class ServerController {
             result.setAuthor(req.getAuthor());
             result.setPageUrl(req.getPageUrl());
             result.setIndex(req.getIndex());
+            result.setPicUrl(req.getPicUrl());
             recordService.save(result);
         }
 

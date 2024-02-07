@@ -22,7 +22,7 @@ public class Record {
     private Date createTime;
 
     /**
-     * 0 未下载  1 已下载
+     * 0 未下载  1 已下载 2 txt 3 txt已下载 4 解析下载地址失败
      */
     private Integer state;
 
@@ -37,6 +37,7 @@ public class Record {
 
     private String pageUrl;
     private String author;
+    private String picUrl;
 
     @TableField("`index`")
     private Integer index;

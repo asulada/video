@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.asuala.mock.vo.MediaDefinition;
+import com.asuala.mock.vo.Record;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -19,6 +20,7 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,8 +41,8 @@ public class AnalysisDownUrlUtils {
     @Value("${down.proxy.port:7890}")
     private int proxyPort;
 
-    public String analysisUrl(String name, String pageUrl) throws IOException {
-        URL url = new URL(pageUrl);   //创建URL对象
+    public Record analysisUrl(Record record, int count, Date date) throws IOException {
+        URL url = new URL(record.getPageUrl());   //创建URL对象
 
         HttpURLConnection conn = (HttpURLConnection) url.openConnection(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyIp, proxyPort)));  //创建HttpURLConnection对象
         conn.setConnectTimeout((int) 10000);
@@ -48,7 +50,7 @@ public class AnalysisDownUrlUtils {
         conn.setReadTimeout((int) 10000);
         conn.setDoInput(true);
         if (conn.getResponseCode() != 200) {
-            log.error("{} 打开地址失败 {}", name, pageUrl);
+            log.error("{} 打开地址失败 {}", record.getName(), record.getPageUrl());
             return null;
         }
         //打印响应内容
@@ -63,31 +65,31 @@ public class AnalysisDownUrlUtils {
         Document parse = Jsoup.parse(sb.toString());
         Elements script = parse.select("script");
         Element element = null;
-        for (int i = 0; i < 4; i++) {
-            element = findScprit(name, script);
+        if (count < 2) {
+            element = findScprit(record.getName(), script);
+            count++;
             if (null != element) {
-                break;
-            }
-        }
+                int startIndex = element.data().indexOf("{");
+                String substring = element.data().substring(startIndex, element.data().indexOf("\n", startIndex) - 1);
+                JSONObject object = JSON.parseObject(substring);
+                JSONArray mediaDefinitions = object.getJSONArray("mediaDefinitions");
 
-        if (null != element) {
-            int startIndex = element.data().indexOf("{");
-            String substring = element.data().substring(startIndex, element.data().indexOf("\n", startIndex) - 1);
-            JSONObject object = JSON.parseObject(substring);
-            JSONArray mediaDefinitions = object.getJSONArray("mediaDefinitions");
+                if (mediaDefinitions.size() > 0) {
 
-            if (mediaDefinitions.size() > 0) {
-
-                List<MediaDefinition> javaList = mediaDefinitions.toJavaList(MediaDefinition.class);
-                javaList = javaList.stream().filter(item -> item.getQuality().matches("-?\\d+(\\.\\d+)?")).sorted((p1,p2)->Integer.parseInt(p2.getQuality())-Integer.parseInt(p1.getQuality())).collect(Collectors.toList());
+                    List<MediaDefinition> javaList = mediaDefinitions.toJavaList(MediaDefinition.class);
+                    javaList = javaList.stream().filter(item -> item.getQuality().matches("-?\\d+(\\.\\d+)?")).sorted((p1, p2) -> Integer.parseInt(p2.getQuality()) - Integer.parseInt(p1.getQuality())).collect(Collectors.toList());
+                    MediaDefinition downMedia = javaList.get(0);
 
 //                List<MediaDefinition> quality = javaList.stream()
 //                        .sorted(Comparator.comparingInt(MediaDefinition::getQuality).reversed()).collect(Collectors.toList());
-                return javaList.get(0).getVideoUrl();
+                    return Record.builder().id(record.getId()).url(downMedia.getVideoUrl()).quality(downMedia.getQuality()).delFlag(0).updateTime(date).build();
+                }
             }
+            log.error("{} 未解析到下载地址\n{}", record.getName(), sb.toString());
+            analysisUrl(record, count, date);
         }
-        log.error("{} 未解析到下载地址\n{}", name, sb.toString());
-        return null;
+
+        return Record.builder().id(record.getId()).state(4).delFlag(0).updateTime(date).build();
     }
 
     private Element findScprit(String name, Elements script) {
@@ -100,11 +102,10 @@ public class AnalysisDownUrlUtils {
 
             return script.get(47);
         }
-        if (script.get(68).data().contains(key)) {
-            log.debug("{} 发现变量在 68", name);
-
-            return script.get(68);
-        }
+//        if (script.get(68).data().contains(key)) {
+//            log.debug("{} 发现变量在 68", name);
+//            return script.get(68);
+//        }
         for (int i = 0; i < script.size(); i++) {
             Element element = script.get(i);
             if (element.data().contains(key)) {

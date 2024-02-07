@@ -11,9 +11,9 @@ spring:
       max-file-size: 1024MB
       max-request-size: 1024MB
   datasource:
-    url: ${jdbc.url}/video?useSSL=false&rewriteBatchedStatements=true&allowMultiQueries=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=UTF8
-    username: ${jdbc.username}
-    password: ${jdbc.password}
+    url: ${env.jdbc.url}/video?useSSL=false&rewriteBatchedStatements=true&allowMultiQueries=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=UTF8
+    username: ${env.jdbc.username}
+    password: ${env.jdbc.password}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
 #      # 设置是否自动提交事务，默认为true
@@ -77,16 +77,16 @@ down:
   client: true
   txtRole: true
   http:
-    salt: ${down.http.salt}
-    addUrl: ${down.http.url}/saveEs
-    delUrl: ${down.http.url}/delEs
-    rebuildUrl: ${down.http.url}/rebuildData
+    salt: ${env.down.http.salt}
+    addUrl: ${env.down.http.url}/saveEs
+    delUrl: ${env.down.http.url}/delEs
+    rebuildUrl: ${env.down.http.url}/rebuildData
   proxy:
     ip: 127.0.0.1
     port: 7890
   directory: "d:\\a\\"
   directoryPage: "d:\\app\\xyz\\"
-  keywordPre: "var flashvars_"
+  keywordPre: ${env.down.keywordPre}
   task:
     num: 1
     childthread: 10
@@ -100,8 +100,8 @@ watch:
   deleteLimit: 2000000
 
 es:
-  port: ${es.port}
-  hostname: ${es.hostname}
+  port: ${env.es.port}
+  hostname: ${env.es.hostname}
   alals: true  # 是否使用别名的方式访问
   indexPrefix: index-
   aliasPrefix: alias-

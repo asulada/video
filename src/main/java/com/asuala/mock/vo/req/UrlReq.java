@@ -16,4 +16,6 @@ public class UrlReq {
     private String author;
     private Integer index;
     private boolean dbDlick = false;
+    private String picUrl;
+
 }

@@ -18,7 +18,7 @@ public class MockApplication {
 
 
     public static void main(String[] args) throws IOException {
-        HttpGlobalConfig.setTimeout(5000);
+        HttpGlobalConfig.setTimeout(10000);
         SpringApplication.run(MockApplication.class, args);
     }
 

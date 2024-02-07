@@ -1,12 +1,11 @@
 package com.asuala.mock.utils;
 
+import com.asuala.mock.vo.Record;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -22,26 +21,69 @@ public class CacheUtils {
     public static final int expireTime = 120;
 
     private static Map<String, LocalDateTime> cache = new HashMap<>();
+    private static Map<Long, Record> cacheRecord = new HashMap<>();
 
     private static Lock cacheLock = new ReentrantLock();
+
+
+    private static Lock cacheRecordLock = new ReentrantLock();
+
+    public static void setCacheRecord(List<Record> list) {
+        cacheRecordLock.lock();
+        try {
+            cacheRecord.clear();
+            for (Record record : list) {
+                cacheRecord.put(record.getId(), record);
+            }
+        } finally {
+            cacheRecordLock.unlock();
+        }
+    }
+
+    public static Map<Long, Record> getCacheRecord() {
+        cacheRecordLock.lock();
+        try {
+            return cacheRecord;
+        } finally {
+            cacheRecordLock.unlock();
+        }
+    }
+
+    public static void clearCacheRecord() {
+        cacheRecordLock.lock();
+        try {
+            cacheRecord.clear();
+        } finally {
+            cacheRecordLock.unlock();
+        }
+    }
+
+    public static void removeCacheRecord(Long key) {
+        cacheRecordLock.lock();
+        try {
+            cacheRecord.remove(key);
+        } finally {
+            cacheRecordLock.unlock();
+        }
+    }
 
     public static Map<String, LocalDateTime> cache(String key, LocalDateTime time) {
         cacheLock.lock();
         try {
             if (null != time) {
-                if (StringUtils.isNotBlank(key)){
+                if (StringUtils.isNotBlank(key)) {
                     cache.put(key, time);
-                }else {
+                } else {
                     LocalDateTime oldTime = time.minusSeconds(expireTime);
                     Iterator<Map.Entry<String, LocalDateTime>> iterator = cache.entrySet().iterator();
-                    while (iterator.hasNext()){
+                    while (iterator.hasNext()) {
                         Map.Entry<String, LocalDateTime> entry = iterator.next();
                         if (oldTime.isAfter(entry.getValue())) {
                             iterator.remove();
                         }
                     }
                 }
-            } else if (StringUtils.isNotBlank(key)){
+            } else if (StringUtils.isNotBlank(key)) {
                 cache.remove(key);
             }
             return cache;

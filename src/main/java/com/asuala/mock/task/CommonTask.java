@@ -7,6 +7,7 @@ import com.asuala.mock.service.RecordPageService;
 import com.asuala.mock.service.RecordService;
 import com.asuala.mock.utils.AnalysisDownUrlUtils;
 import com.asuala.mock.utils.CacheUtils;
+import com.asuala.mock.vo.MediaDefinition;
 import com.asuala.mock.vo.Record;
 import com.asuala.mock.vo.RecordPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -78,81 +79,64 @@ public class CommonTask {
     }
 
 
-    @Scheduled(cron = "*/5 * * * * ?")
+    @Scheduled(cron = "*/20 * * * * ?")
     public void down() {
         if (!(flag && CacheUtils.downFlag(null))) {
             return;
         }
         flag = false;
-        List<Record> list = new ArrayList<>();
-        List<Long> deleteIds = new ArrayList<>();
-
         try {
-            getList(1, new Date().getTime() - 60000 * 59, list, deleteIds);
-            if (deleteIds.size() > 0) {
-                recordService.removeByIds(deleteIds);
-            }
-            if (downloads.size() == 0) {
-                CacheUtils.setLastId(CacheUtils.setLastId(null));
-            }
-            if (list.size() == 0) {
-                checkDelete();
-                new Date();
-            } else {
-                new Date();
-            }
-            if (list.size() >= 1) {
-                LocalDateTime oldTime = LocalDateTime.now().minusSeconds(300);
-
-                if (downloads.size() < etistCount) {
-                    if (downloads.size() > 0) {
-                        for (Map.Entry<String, M3u8DownloadFactory.M3u8Download> entry : downloads.entrySet()) {
-                            M3u8DownloadFactory.M3u8Download download = entry.getValue();
-                            if (oldTime.isAfter(download.getStartTime())) {
-                                download.stopDown();
-                            }
-                        }
-                    }
-                    int j = 0;
-                    for (int i = downloads.size(); i < etistCount; i++) {
-                        if (j < list.size()) {
-                            Record record = list.get(j++);
-                            String fileName = record.getName() + "-" + record.getQuality() + "p";
-                            if (downloads.containsKey(fileName) || CacheUtils.cache(null, null).containsKey(fileName)) {
-                                i--;
-                                continue;
-                            }
-                            CacheUtils.setLastId(record.getId());
-                            downloads.put(fileName, down(fileName, record));
-                        } else {
-                            break;
-                        }
-                    }
-
-                } else {
-                    for (Map.Entry<String, M3u8DownloadFactory.M3u8Download> entry : downloads.entrySet()) {
-                        M3u8DownloadFactory.M3u8Download download = entry.getValue();
-                        if (oldTime.isAfter(download.getStartTime())) {
-                            download.stopDown();
-                            for (int i = 0; i < list.size(); i++) {
-                                Record record = list.get(i);
-                                String fileName = record.getName() + "-" + record.getQuality() + "p";
-                                if (downloads.containsKey(fileName) || CacheUtils.cache(null, null).containsKey(fileName)) {
-                                    continue;
-                                }
-                                CacheUtils.setLastId(record.getId());
-                                downloads.put(fileName, down(fileName, record));
-                            }
-
-                        }
-                    }
-
+            if (CacheUtils.getCacheRecord().size() == 0) {
+                List<Record> list = new ArrayList<>();
+                List<Long> deleteIds = new ArrayList<>();
+                getList(1, new Date().getTime() - 60000 * 59, list, deleteIds);
+                if (deleteIds.size() > 0) {
+                    recordService.removeByIds(deleteIds);
                 }
+                if (downloads.size() == 0) {
+                    CacheUtils.setLastId(CacheUtils.setLastId(null));
+                }
+                if (list.size() == 0) {
+                    checkDelete();
+                }
+                if (list.size() >= 1) {
+                    CacheUtils.setCacheRecord(list);
+                    addTask(CacheUtils.getCacheRecord().values());
+                }
+            } else {
+                addTask(CacheUtils.getCacheRecord().values());
             }
+
         } catch (Exception e) {
             log.error("定时调度失败", e);
         } finally {
             flag = true;
+        }
+    }
+
+    private void addTask(Collection<Record> list) {
+        LocalDateTime oldTime = LocalDateTime.now().minusSeconds(300);
+
+        for (Map.Entry<String, M3u8DownloadFactory.M3u8Download> entry : downloads.entrySet()) {
+            M3u8DownloadFactory.M3u8Download download = entry.getValue();
+            if (oldTime.isAfter(download.getStartTime())) {
+                download.stopDown();
+            }
+        }
+        for (int i = downloads.size(); i < etistCount; i++) {
+            for (Record record : list) {
+                String fileName = record.getName() + "-" + record.getQuality() + "p";
+                if (downloads.containsKey(fileName) || CacheUtils.cache(null, null).containsKey(fileName)) {
+                    i--;
+                    CacheUtils.removeCacheRecord(record.getId());
+                    break;
+                }
+                CacheUtils.setLastId(record.getId());
+                downloads.put(fileName, down(fileName, record));
+                CacheUtils.removeCacheRecord(record.getId());
+                break;
+            }
+
         }
     }
 
@@ -206,7 +190,7 @@ public class CommonTask {
 //        m3u8Download.setAnalysisDownUrlUtils(analysisDownUrlUtils);
         m3u8Download.setStartTime(LocalDateTime.now());
         m3u8Download.setOverPage(recordPageService.list(new LambdaQueryWrapper<RecordPage>().select(RecordPage::getNum).eq(RecordPage::getPId, record.getId())).stream().map(RecordPage::getNum).collect(Collectors.toSet()));
-
+        m3u8Download.setPicUrl(record.getPicUrl());
         //添加额外请求头
       /*  Map<String, Object> headersMap = new HashMap<>();
         headersMap.put("Content-Type", "text/html;charset=utf-8");
@@ -237,11 +221,8 @@ public class CommonTask {
             Date date = new Date();
             for (Record record : recordPage) {
                 if (StringUtils.isNotBlank(record.getPageUrl())) {
-                    String downUrl = analysisDownUrlUtils.analysisUrl(record.getName(), record.getPageUrl());
-                    if (StringUtils.isNotBlank(downUrl)) {
-                        list.add(Record.builder().id(record.getId()).url(downUrl).delFlag(0).updateTime(date).build());
-                        num++;
-                    }
+                    list.add(analysisDownUrlUtils.analysisUrl(record, 0, date));
+                    num++;
                 }
             }
         }
