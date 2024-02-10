@@ -19,7 +19,7 @@ public enum FileChangeEventEnum {
     **/
     UNKNOWN(0,""),
     FILE_CREATED(FileMonitor.FILE_CREATED,"创建"),
-    FILE_DELETED(FileMonitor.FILE_CREATED,"删除"),
+    FILE_DELETED(FileMonitor.FILE_DELETED,"删除"),
     FILE_MODIFIED(FileMonitor.FILE_MODIFIED,"修改"),
     FILE_NAME_CHANGED_OLD(FileMonitor.FILE_NAME_CHANGED_OLD,"原名称"),
     FILE_NAME_CHANGED_NEW(FileMonitor.FILE_NAME_CHANGED_NEW,"新名称"),

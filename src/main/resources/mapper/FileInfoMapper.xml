@@ -316,7 +316,7 @@
                                PRIMARY KEY (`id`),
                                KEY `INDEX_NAME` (`name`) USING BTREE
     ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='文件信息';
-    INSERT INTO file_info SELECT * FROM file_info_old  WHERE`index`!=#{index};
+    INSERT INTO file_info (`name`, `path`, suffix, `size`, update_time, dir, create_time, change_time, `index`) SELECT `name`, `path`, suffix, `size`, update_time, dir, create_time, change_time, `index` FROM file_info_old  WHERE`index`!=#{index};
     DROP TABLE file_info_old;
   </update>
 

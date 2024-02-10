@@ -2,6 +2,7 @@ package com.asuala.mock.vo.res;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.formula.functions.T;
 
 /**
@@ -22,6 +23,7 @@ public class BaseResponse {
         baseResponse.setData(data);
         return baseResponse;
     }
+
     public static BaseResponse ok() {
         BaseResponse baseResponse = new BaseResponse();
         baseResponse.setCode(200);
@@ -49,6 +51,13 @@ public class BaseResponse {
         BaseResponse baseResponse = new BaseResponse();
         baseResponse.setCode(222);
         baseResponse.setMsg(msg + "为空");
+        return baseResponse;
+    }
+
+    public static BaseResponse err(String... msg) {
+        BaseResponse baseResponse = new BaseResponse();
+        baseResponse.setCode(222);
+        baseResponse.setMsg(StringUtils.join(msg, " "));
         return baseResponse;
     }
 }

@@ -1,6 +1,5 @@
 package com.asuala.mock.m3u8.download;
 
-import cn.hutool.core.io.FileUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.asuala.mock.m3u8.Exception.M3u8Exception;
 import com.asuala.mock.m3u8.listener.DownloadListener;
@@ -173,6 +172,7 @@ public class M3u8DownloadFactory {
             this.proxy = new Proxy(type, new InetSocketAddress(address, port));
         }
 
+        private Integer failNum;
         //是否加密
         private boolean encryption = false;
 
@@ -229,7 +229,7 @@ public class M3u8DownloadFactory {
                 checkField();
             } catch (Exception e) {
                 log.error("地址检测失败 {}", fileName);
-                recordService.deleteRecord(id, fileName);
+                recordService.deleteRecord(id, fileName, failNum);
                 stopDown();
                 return;
             }
@@ -308,11 +308,11 @@ public class M3u8DownloadFactory {
                     deleteFiles();
                     recordService.success(id);
                     CacheUtils.setLastId(id);
-                    CacheUtils.x = 1;
+                    CacheUtils.x = 0;
                     CommonTask.downloads.remove(fileName);
                 } else if (failCount.get() > 0) {
                     log.error("《{}》 ts片段下载失败", fileName);
-                    recordService.deleteRecord(id, fileName);
+                    recordService.deleteRecord(id, fileName, failNum);
                     stopDown();
                 } else if (stopCosumer) {
                     log.error("暂停任务《{}》", fileName);

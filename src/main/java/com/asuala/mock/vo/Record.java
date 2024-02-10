@@ -42,4 +42,6 @@ public class Record {
     @TableField("`index`")
     private Integer index;
 
+    private Integer failNum;
+
 }

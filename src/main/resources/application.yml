@@ -76,6 +76,8 @@ down:
   server: false
   client: true
   txtRole: true
+  downCron: "*/5 * * * * ?"
+  addTaskCron: "0 0/1 * * * ?"
   http:
     salt: ${env.down.http.salt}
     addUrl: ${env.down.http.url}/saveEs
@@ -92,7 +94,7 @@ down:
     childthread: 10
     pauseSecond: 60
   search:
-    pageSize: 5
+    pageSize: 10
 
 watch:
   dir: "d:\\a\\,e:\\a\\"

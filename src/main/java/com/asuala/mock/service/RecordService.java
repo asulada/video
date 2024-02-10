@@ -1,6 +1,8 @@
 package com.asuala.mock.service;
 
+import com.asuala.mock.enums.state.RecordEnum;
 import com.asuala.mock.mapper.RecordMapper;
+import com.asuala.mock.utils.CacheUtils;
 import com.asuala.mock.vo.Record;
 import com.asuala.mock.vo.req.UrlReq;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -22,19 +24,27 @@ public class RecordService extends ServiceImpl<RecordMapper, Record> {
     public void success(Long id) {
         Record record = new Record();
         record.setId(id);
-        record.setState(1);
+        record.setState(RecordEnum.HANDLED.getCode());
         record.setUpdateTime(new Date());
-
         baseMapper.updateById(record);
+
+        CacheUtils.removeCacheRecord(record.getId());
     }
 
-    public void deleteRecord(Long id, String fileName) {
-        log.error("删除id {}, {}", id, fileName);
+    public void deleteRecord(Long id, String fileName, Integer failNum) {
+        failNum++;
+        log.error("禁止下载: id {}, {}, 失败次数: {}", id, fileName, failNum);
         Record record = new Record();
         record.setId(id);
-        record.setDelFlag(1);
+        record.setFailNum(failNum);
         record.setUpdateTime(new Date());
+        if (failNum > 2) {
+            record.setState(RecordEnum.FORBID_DOWN.getCode());
+        } else {
+            record.setDelFlag(1);
+        }
         baseMapper.updateDelAndTime(record);
+        CacheUtils.removeCacheRecord(record.getId());
 //        baseMapper.updateById(record);
     }
 

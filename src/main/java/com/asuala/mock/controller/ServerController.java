@@ -2,6 +2,7 @@ package com.asuala.mock.controller;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.alibaba.fastjson2.JSONObject;
+import com.asuala.mock.enums.state.RecordEnum;
 import com.asuala.mock.es.Es8Client;
 import com.asuala.mock.es.entity.FileInfoEs;
 import com.asuala.mock.m3u8.utils.Constant;
@@ -165,7 +166,7 @@ public class ServerController {
 //            res.put("msg", "文件已存在");
 //            return res;
 //        }
-        if (recordService.count(new LambdaQueryWrapper<Record>().eq(Record::getState, 0).eq(Record::getName, req.getFileName()).eq(Record::getQuality, req.getQuality()).eq(Record::getAuthor, req.getAuthor())) > 0) {
+        if (recordService.count(new LambdaQueryWrapper<Record>().eq(Record::getState, RecordEnum.UNTREATED.getCode()).eq(Record::getName, req.getFileName()).eq(Record::getQuality, req.getQuality()).eq(Record::getAuthor, req.getAuthor())) > 0) {
             res.put("msg", "文件已存在下载列表");
             return res;
         }
@@ -189,7 +190,7 @@ public class ServerController {
             result.setUrl(req.getUrl());
             result.setCreateTime(new Date());
             result.setQuality(req.getQuality());
-            result.setState(0);
+            result.setState(RecordEnum.UNTREATED.getCode());
             result.setAuthor(req.getAuthor());
             result.setPageUrl(req.getPageUrl());
             result.setIndex(req.getIndex());
@@ -214,7 +215,7 @@ public class ServerController {
             res.put("msg", "作者为空");
             return res;
         }
-        if (recordService.count(new LambdaQueryWrapper<Record>().in(Record::getState, 2, 3).eq(Record::getName, req.getFileName()).eq(Record::getAuthor, req.getAuthor())) > 0) {
+        if (recordService.count(new LambdaQueryWrapper<Record>().in(Record::getState, RecordEnum.TXT.getCode(), RecordEnum.TXT_DOWNLOADED.getCode()).eq(Record::getName, req.getFileName()).eq(Record::getAuthor, req.getAuthor())) > 0) {
             res.put("msg", "文件已存在下载列表");
             return res;
         }
@@ -226,7 +227,7 @@ public class ServerController {
         Record result = new Record();
         result.setName(req.getFileName());
         result.setCreateTime(new Date());
-        result.setState(2);
+        result.setState(RecordEnum.TXT.getCode());
         result.setAuthor(req.getAuthor());
         result.setQuality("txt");
         result.setIndex(req.getIndex());

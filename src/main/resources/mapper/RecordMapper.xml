@@ -16,11 +16,12 @@
     <result column="author" jdbcType="VARCHAR" property="author" />
     <result column="index" jdbcType="TINYINT" property="index" />
     <result column="pic_url" jdbcType="VARCHAR" property="picUrl" />
+    <result column="fail_num" jdbcType="TINYINT" property="failNum" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     id, `name`, url, create_time, `state`, update_time, quality, del_flag, page_url,
-    author, `index`, pic_url
+    author, `index`, pic_url, fail_num
   </sql>
   <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
     <!--@mbg.generated-->
@@ -71,6 +72,9 @@
       <if test="picUrl != null">
         pic_url,
       </if>
+      <if test="failNum != null">
+        fail_num,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
       <if test="name != null">
@@ -105,6 +109,9 @@
       </if>
       <if test="picUrl != null">
         #{picUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="failNum != null">
+        #{failNum,jdbcType=TINYINT},
       </if>
     </trim>
   </insert>
@@ -145,6 +152,9 @@
       <if test="picUrl != null">
         pic_url = #{picUrl,jdbcType=VARCHAR},
       </if>
+      <if test="failNum != null">
+        fail_num = #{failNum,jdbcType=TINYINT},
+      </if>
     </set>
     where id = #{id,jdbcType=BIGINT}
   </update>
@@ -161,7 +171,8 @@
     page_url = #{pageUrl,jdbcType=VARCHAR},
     author = #{author,jdbcType=VARCHAR},
     `index` = #{index,jdbcType=TINYINT},
-    pic_url = #{picUrl,jdbcType=VARCHAR}
+    pic_url = #{picUrl,jdbcType=VARCHAR},
+    fail_num = #{failNum,jdbcType=TINYINT}
     where id = #{id,jdbcType=BIGINT}
   </update>
   <update id="updateBatch" parameterType="java.util.List">
@@ -221,6 +232,11 @@
       <trim prefix="pic_url = case" suffix="end,">
         <foreach collection="list" index="index" item="item">
           when id = #{item.id,jdbcType=BIGINT} then #{item.picUrl,jdbcType=VARCHAR}
+        </foreach>
+      </trim>
+      <trim prefix="fail_num = case" suffix="end,">
+        <foreach collection="list" index="index" item="item">
+          when id = #{item.id,jdbcType=BIGINT} then #{item.failNum,jdbcType=TINYINT}
         </foreach>
       </trim>
     </trim>
@@ -310,6 +326,13 @@
           </if>
         </foreach>
       </trim>
+      <trim prefix="fail_num = case" suffix="end,">
+        <foreach collection="list" index="index" item="item">
+          <if test="item.failNum != null">
+            when id = #{item.id,jdbcType=BIGINT} then #{item.failNum,jdbcType=TINYINT}
+          </if>
+        </foreach>
+      </trim>
     </trim>
     where id in
     <foreach close=")" collection="list" item="item" open="(" separator=", ">
@@ -320,13 +343,14 @@
     <!--@mbg.generated-->
     insert into record
     (`name`, url, create_time, `state`, update_time, quality, del_flag, page_url, author,
-    `index`, pic_url)
+    `index`, pic_url, fail_num)
     values
     <foreach collection="list" item="item" separator=",">
       (#{item.name,jdbcType=VARCHAR}, #{item.url,jdbcType=VARCHAR}, #{item.createTime,jdbcType=TIMESTAMP},
       #{item.state,jdbcType=TINYINT}, #{item.updateTime,jdbcType=TIMESTAMP}, #{item.quality,jdbcType=VARCHAR},
       #{item.delFlag,jdbcType=TINYINT}, #{item.pageUrl,jdbcType=VARCHAR}, #{item.author,jdbcType=VARCHAR},
-      #{item.index,jdbcType=TINYINT}, #{item.picUrl,jdbcType=VARCHAR})
+      #{item.index,jdbcType=TINYINT}, #{item.picUrl,jdbcType=VARCHAR}, #{item.failNum,jdbcType=TINYINT}
+      )
     </foreach>
   </insert>
 

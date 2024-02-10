@@ -1,5 +1,8 @@
 package com.asuala.mock.spider.task;
 
+import com.asuala.mock.enums.state.ChannelDetailsEnum;
+import com.asuala.mock.enums.state.ChannelEnum;
+import com.asuala.mock.enums.state.RecordEnum;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.mapper.*;
 import com.asuala.mock.vo.*;
@@ -58,7 +61,7 @@ public class CommonSpiderTask {
         }
         excuteFlag = false;
         try {
-            List<Channel> list = channelMapper.selectList(new Page<Channel>(1, 10), new LambdaQueryWrapper<Channel>().eq(Channel::getState, 0).orderByAsc(Channel::getId));
+            List<Channel> list = channelMapper.selectList(new Page<Channel>(1, 10), new LambdaQueryWrapper<Channel>().eq(Channel::getState, ChannelEnum.UNTREATED.getCode()).orderByAsc(Channel::getId));
             if (list.size() > 0) {
                 List<ChannelDetails> itemList = new ArrayList<>();
                 List<Record> recordList = new ArrayList<>();
@@ -69,9 +72,9 @@ public class CommonSpiderTask {
                     String domian = url.getProtocol() + "://" + url.getHost();
                     try {
                         findItem(itemList, date, channel, domian, channel.getUrl(), recordList);
-                        builder.state(1);
+                        builder.state(ChannelEnum.HANDLED.getCode());
                     } catch (Exception e) {
-                        builder.state(2);
+                        builder.state(ChannelEnum.SPIDER_FAILED.getCode());
                         log.error("爬取内容异常: {}", channel.getName(), e);
                     } finally {
                         channelMapper.updateById(builder.build());
@@ -129,15 +132,15 @@ public class CommonSpiderTask {
                 channelDetails.setName(title);
                 channelDetails.setAuthor(removeSpecialCharacters(authorLi));
                 channelDetails.setCreateTime(date);
-                channelDetails.setState(0);
+                channelDetails.setState(ChannelDetailsEnum.UNTREATED.getCode());
                 Long rId = recordMapper.findIdByNameAndAuthor(title, authorLi);
                 if (null != rId) {
-                    channelDetails.setState(2);//record重复
+                    channelDetails.setState(ChannelDetailsEnum.REPEAT_RECORD.getCode());//record重复
                     channelDetails.setRId(rId);
                 } else {
                     List<FileInfo> fileInfos = fileInfoMapper.selectList(new LambdaQueryWrapper<FileInfo>().select(FileInfo::getId, FileInfo::getName, FileInfo::getPath).likeRight(FileInfo::getName, title));
                     if (fileInfos.size() > 0) {
-                        channelDetails.setState(3);//record重复
+                        channelDetails.setState(ChannelDetailsEnum.REPEAT_FILE.getCode());//record重复
                         channelDetailsMapper.insert(channelDetails);
                         List<ChannelRepeat> list = new ArrayList<>();
                         for (FileInfo fileInfo : fileInfos) {
@@ -154,7 +157,7 @@ public class CommonSpiderTask {
                         Record record = new Record();
                         record.setName(title);
                         record.setCreateTime(date);
-                        record.setState(0);
+                        record.setState(RecordEnum.UNTREATED.getCode());
                         record.setDelFlag(1);
                         record.setPageUrl(domian + href);
                         record.setAuthor(authorLi);
@@ -165,10 +168,13 @@ public class CommonSpiderTask {
                 }
                 itemList.add(channelDetails);
             }
-            Element nextPage = document.selectFirst(".pagination3").selectFirst(".page_next");
-            if (null != nextPage && !nextPage.hasClass("disabled")) {
-                String nextHref = nextPage.selectFirst("a").attr("href");
-                findItem(itemList, date, channel, domian, domian + nextHref, recordList);
+            Element paginationEle = document.selectFirst(".pagination3");
+            if (null != paginationEle) {
+                Element nextPage = paginationEle.selectFirst(".page_next");
+                if (null != nextPage && !nextPage.hasClass("disabled")) {
+                    String nextHref = nextPage.selectFirst("a").attr("href");
+                    findItem(itemList, date, channel, domian, domian + nextHref, recordList);
+                }
             }
         }
     }

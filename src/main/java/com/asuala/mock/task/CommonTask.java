@@ -78,35 +78,39 @@ public class CommonTask {
         CacheUtils.pauseSecond = pauseSecond;
     }
 
+    @Scheduled(cron = "${down.addTaskCron}")
+    public void addTask() throws IOException {
+        if (CacheUtils.getCacheRecord().size() < (pageSize / 2)) {
+            List<Record> list = new ArrayList<>();
+            List<Long> deleteIds = new ArrayList<>();
+            getList(1, new Date().getTime() - 60000 * 59, list, deleteIds);
+            if (deleteIds.size() > 0) {
+                recordService.removeByIds(deleteIds);
+            }
+            if (list.size() == 0) {
+                if (checkDelete()) {
+                    addTask();
+                }
+            }
+            if (list.size() > 0) {
+                CacheUtils.addCacheRecord(list);
+            }
+        }
+    }
 
-    @Scheduled(cron = "*/20 * * * * ?")
+    @Scheduled(cron = "${down.downCron}")
     public void down() {
         if (!(flag && CacheUtils.downFlag(null))) {
             return;
         }
         flag = false;
         try {
-            if (CacheUtils.getCacheRecord().size() == 0) {
-                List<Record> list = new ArrayList<>();
-                List<Long> deleteIds = new ArrayList<>();
-                getList(1, new Date().getTime() - 60000 * 59, list, deleteIds);
-                if (deleteIds.size() > 0) {
-                    recordService.removeByIds(deleteIds);
-                }
+            if (CacheUtils.getCacheRecord().size() != 0) {
                 if (downloads.size() == 0) {
                     CacheUtils.setLastId(CacheUtils.setLastId(null));
                 }
-                if (list.size() == 0) {
-                    checkDelete();
-                }
-                if (list.size() >= 1) {
-                    CacheUtils.setCacheRecord(list);
-                    addTask(CacheUtils.getCacheRecord().values());
-                }
-            } else {
                 addTask(CacheUtils.getCacheRecord().values());
             }
-
         } catch (Exception e) {
             log.error("定时调度失败", e);
         } finally {
@@ -128,12 +132,10 @@ public class CommonTask {
                 String fileName = record.getName() + "-" + record.getQuality() + "p";
                 if (downloads.containsKey(fileName) || CacheUtils.cache(null, null).containsKey(fileName)) {
                     i--;
-                    CacheUtils.removeCacheRecord(record.getId());
                     break;
                 }
                 CacheUtils.setLastId(record.getId());
                 downloads.put(fileName, down(fileName, record));
-                CacheUtils.removeCacheRecord(record.getId());
                 break;
             }
 
@@ -143,7 +145,7 @@ public class CommonTask {
 
     private void getList(int pageNow, long time, List<Record> list, List<Long> deleteIds) {
         Page<Record> page = new Page<>(pageNow++, pageSize);
-        Page<Record> recordPage = recordService.page(page, new LambdaQueryWrapper<Record>().eq(Record::getState, 0).eq(Record::getIndex, Constant.index).gt(Record::getId, CacheUtils.setLastId(null)).orderByAsc(Record::getId));
+        Page<Record> recordPage = recordService.page(page, new LambdaQueryWrapper<Record>().eq(Record::getState, 0).eq(Record::getIndex, Constant.index).gt(Record::getId, CacheUtils.getLastCacheRecordKey()).orderByAsc(Record::getId));
 
         if (recordPage.getRecords().size() == 0) {
             return;
@@ -191,6 +193,7 @@ public class CommonTask {
         m3u8Download.setStartTime(LocalDateTime.now());
         m3u8Download.setOverPage(recordPageService.list(new LambdaQueryWrapper<RecordPage>().select(RecordPage::getNum).eq(RecordPage::getPId, record.getId())).stream().map(RecordPage::getNum).collect(Collectors.toSet()));
         m3u8Download.setPicUrl(record.getPicUrl());
+        m3u8Download.setFailNum(record.getFailNum());
         //添加额外请求头
       /*  Map<String, Object> headersMap = new HashMap<>();
         headersMap.put("Content-Type", "text/html;charset=utf-8");
@@ -208,12 +211,12 @@ public class CommonTask {
     }
 
     //    @Scheduled(cron = "0 */5 * * * ?")
-    public void checkDelete() throws IOException {
+    public boolean checkDelete() throws IOException {
         int num = 0;
         int pageNow = 1;
         List<Record> list = new ArrayList<>();
-        while (num < 5) {
-            Page<Record> page = new Page<>(pageNow++, 5);
+        while (num < pageSize) {
+            Page<Record> page = new Page<>(pageNow++, pageSize);
             List<Record> recordPage = recordService.pagePageUrl(page, Constant.index);
             if (recordPage.size() == 0) {
                 break;
@@ -221,14 +224,19 @@ public class CommonTask {
             Date date = new Date();
             for (Record record : recordPage) {
                 if (StringUtils.isNotBlank(record.getPageUrl())) {
-                    list.add(analysisDownUrlUtils.analysisUrl(record, 0, date));
-                    num++;
+                    Record result = analysisDownUrlUtils.analysisUrl(record, 0, date);
+                    list.add(result);
+                    if (null == result.getState()) {
+                        num++;
+                    }
                 }
             }
         }
         if (list.size() > 0) {
             recordService.updateBatchSelective(list);
+            return true;
         }
+        return false;
     }
 
     @Scheduled(cron = "0 0/20 * * * ?")

@@ -4,6 +4,7 @@ import com.asuala.mock.vo.Record;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
@@ -21,7 +22,7 @@ public class CacheUtils {
     public static final int expireTime = 120;
 
     private static Map<String, LocalDateTime> cache = new HashMap<>();
-    private static Map<Long, Record> cacheRecord = new HashMap<>();
+    private static Map<Long, Record> cacheRecord = new LinkedHashMap<>();
 
     private static Lock cacheLock = new ReentrantLock();
 
@@ -67,6 +68,41 @@ public class CacheUtils {
         }
     }
 
+    public static void addCacheRecord(List<Record> list) {
+        cacheRecordLock.lock();
+        try {
+            for (Record record : list) {
+                cacheRecord.put(record.getId(), record);
+            }
+        } finally {
+            cacheRecordLock.unlock();
+        }
+    }
+
+    public static Long getLastCacheRecordKey() {
+        cacheRecordLock.lock();
+        Long key = 0L;
+        try {
+            try {
+                if (cacheRecord.size() > 0) {
+                    key = getTailByReflection((LinkedHashMap<Long, Record>) cacheRecord).getKey();
+                }
+            } catch (Exception e) {
+                log.error("获取最后一个元素失败!", e);
+            }
+            return key;
+        } finally {
+            cacheRecordLock.unlock();
+        }
+    }
+
+    public static <K, V> Map.Entry<K, V> getTailByReflection(LinkedHashMap<K, V> map)
+            throws NoSuchFieldException, IllegalAccessException {
+        Field tail = map.getClass().getDeclaredField("tail");
+        tail.setAccessible(true);
+        return (Map.Entry<K, V>) tail.get(map);
+    }
+
     public static Map<String, LocalDateTime> cache(String key, LocalDateTime time) {
         cacheLock.lock();
         try {
@@ -97,7 +133,7 @@ public class CacheUtils {
 //    }
 
 
-    public static int x = 1;
+    public static int x = 0;
 
     public static int pauseSecond = 60;
     private static LocalDateTime pauseTime;

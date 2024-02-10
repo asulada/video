@@ -1,5 +1,6 @@
 package com.asuala.mock.task;
 
+import com.asuala.mock.enums.state.RecordEnum;
 import com.asuala.mock.service.RecordService;
 import com.asuala.mock.vo.Record;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -43,7 +44,7 @@ public class TxtTask {
         List<Long> txtIds = new ArrayList<>();
         while (true) {
             Page<Record> page = new Page<>(pageNow++, pageSize);
-            Page<Record> recordPage = recordService.page(page, new LambdaQueryWrapper<Record>().eq(Record::getState, 2).orderByAsc(Record::getId));
+            Page<Record> recordPage = recordService.page(page, new LambdaQueryWrapper<Record>().eq(Record::getState, RecordEnum.TXT.getCode()).orderByAsc(Record::getId));
             if (recordPage.getRecords().size() == 0) {
                 break;
             }
@@ -53,7 +54,7 @@ public class TxtTask {
             }
         }
         if (txtIds.size() > 0) {
-            recordService.update(new LambdaUpdateWrapper<Record>().set(Record::getState, 3).in(Record::getId, txtIds));
+            recordService.update(new LambdaUpdateWrapper<Record>().set(Record::getState, RecordEnum.TXT_DOWNLOADED.getCode()).in(Record::getId, txtIds));
         }
     }
 

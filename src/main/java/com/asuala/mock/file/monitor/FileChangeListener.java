@@ -157,6 +157,7 @@ public class FileChangeListener implements FileMonitor.FileListener {
         FileInfoReq req = new FileInfoReq();
         req.setId(fileInfo.getId());
         req.setSign(MD5Utils.getSaltMD5(fileInfo.getName(), salt));
+        req.setName(fileInfo.getName());
         try {
             HttpUtil.post(delUrl, JSON.toJSONString(req));
         } catch (Exception e) {
