@@ -21,15 +21,13 @@ public interface RecordMapper extends BaseMapper<Record> {
 
     int updateBatch(List<Record> list);
 
-    int updateBatchSelective(List<Record> list);
-
     int batchInsert(@Param("list") List<Record> list);
 
     void updateDelAndTime(Record record);
 
     Record findLastSameFile(UrlReq req);
 
-    List<Record> pagePageUrl(Page<Record> page, @Param("index") int index);
+    List<Record> pagePageUrl(Page<Record> page, @Param("index") int index, @Param("lastId") Long lastId);
 
     List<String> findQualityByAuthorAndName(@Param("author")String author,@Param("name")String name);
 

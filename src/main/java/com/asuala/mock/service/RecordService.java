@@ -31,19 +31,19 @@ public class RecordService extends ServiceImpl<RecordMapper, Record> {
         CacheUtils.removeCacheRecord(record.getId());
     }
 
-    public void deleteRecord(Long id, String fileName, Integer failNum) {
+    public void pauseRecord(Long id, String fileName, Integer failNum) {
         failNum++;
-        log.error("禁止下载: id {}, {}, 失败次数: {}", id, fileName, failNum);
+        log.error("暂停下载: id {}, {}, 失败次数: {}", id, fileName, failNum);
         Record record = new Record();
         record.setId(id);
         record.setFailNum(failNum);
         record.setUpdateTime(new Date());
-        if (failNum > 2) {
+        if (failNum > 1) {
             record.setState(RecordEnum.FORBID_DOWN.getCode());
         } else {
-            record.setDelFlag(1);
+            record.setState(RecordEnum.PAUSE_DOWN.getCode());
         }
-        baseMapper.updateDelAndTime(record);
+        baseMapper.updateByPrimaryKeySelective(record);
         CacheUtils.removeCacheRecord(record.getId());
 //        baseMapper.updateById(record);
     }
@@ -61,11 +61,8 @@ public class RecordService extends ServiceImpl<RecordMapper, Record> {
         baseMapper.updateByPrimaryKeySelective(record);
     }
 
-    public List<Record> pagePageUrl(Page<Record> page, int index) {
-        return baseMapper.pagePageUrl(page, index);
+    public List<Record> pagePageUrl(Page<Record> page, int index, Long lastId) {
+        return baseMapper.pagePageUrl(page, index, lastId);
     }
 
-    public void updateBatchSelective(List<Record> list) {
-        baseMapper.updateBatchSelective(list);
-    }
 }

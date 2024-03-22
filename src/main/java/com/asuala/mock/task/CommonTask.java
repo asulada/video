@@ -1,16 +1,18 @@
 package com.asuala.mock.task;
 
-import com.asuala.mock.m3u8.download.M3u8DownloadFactory;
+import com.asuala.mock.enums.state.RecordEnum;
+import com.asuala.mock.m3u8.download.M3u8Download;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.service.IndexService;
 import com.asuala.mock.service.RecordPageService;
 import com.asuala.mock.service.RecordService;
+import com.asuala.mock.transcode.TranscodeService;
 import com.asuala.mock.utils.AnalysisDownUrlUtils;
 import com.asuala.mock.utils.CacheUtils;
-import com.asuala.mock.vo.MediaDefinition;
 import com.asuala.mock.vo.Record;
 import com.asuala.mock.vo.RecordPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +42,7 @@ public class CommonTask {
     private final RecordPageService recordPageService;
     private final IndexService indexService;
     private final AnalysisDownUrlUtils analysisDownUrlUtils;
+    private final TranscodeService transcodeService;
 
     @Value("${down.directory:'d:\\app\\'}")
     private String downDir;
@@ -67,7 +70,7 @@ public class CommonTask {
     private static boolean flag = true;
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public static Map<String, M3u8DownloadFactory.M3u8Download> downloads = new HashMap<>();
+    public static Map<String, M3u8Download> downloads = new HashMap<>();
 
     @PostConstruct
     public void mkdirs() {
@@ -85,7 +88,7 @@ public class CommonTask {
             List<Long> deleteIds = new ArrayList<>();
             getList(1, new Date().getTime() - 60000 * 59, list, deleteIds);
             if (deleteIds.size() > 0) {
-                recordService.removeByIds(deleteIds);
+                recordService.update(new LambdaUpdateWrapper<Record>().set(Record::getState, RecordEnum.PAUSE_DOWN.getCode()).in(Record::getId, deleteIds));
             }
             if (list.size() == 0) {
                 if (checkDelete()) {
@@ -121,10 +124,10 @@ public class CommonTask {
     private void addTask(Collection<Record> list) {
         LocalDateTime oldTime = LocalDateTime.now().minusSeconds(300);
 
-        for (Map.Entry<String, M3u8DownloadFactory.M3u8Download> entry : downloads.entrySet()) {
-            M3u8DownloadFactory.M3u8Download download = entry.getValue();
+        for (Map.Entry<String, M3u8Download> entry : downloads.entrySet()) {
+            M3u8Download download = entry.getValue();
             if (oldTime.isAfter(download.getStartTime())) {
-                download.stopDown();
+                download.setStopFlag(true);
             }
         }
         for (int i = downloads.size(); i < etistCount; i++) {
@@ -145,7 +148,7 @@ public class CommonTask {
 
     private void getList(int pageNow, long time, List<Record> list, List<Long> deleteIds) {
         Page<Record> page = new Page<>(pageNow++, pageSize);
-        Page<Record> recordPage = recordService.page(page, new LambdaQueryWrapper<Record>().eq(Record::getState, 0).eq(Record::getIndex, Constant.index).gt(Record::getId, CacheUtils.getLastCacheRecordKey()).orderByAsc(Record::getId));
+        Page<Record> recordPage = recordService.page(page, new LambdaQueryWrapper<Record>().eq(Record::getState, RecordEnum.UNTREATED.getCode()).eq(Record::getIndex, Constant.index).gt(Record::getId, CacheUtils.getLastCacheRecordKey()).orderByAsc(Record::getId));
 
         if (recordPage.getRecords().size() == 0) {
             return;
@@ -170,10 +173,10 @@ public class CommonTask {
     }
 
 
-    private M3u8DownloadFactory.M3u8Download down(String fileName, Record record) {
+    private M3u8Download down(String fileName, Record record) {
 
         log.info("开始下载: 《{}》", fileName);
-        M3u8DownloadFactory.M3u8Download m3u8Download = new M3u8DownloadFactory().getInstance(record.getUrl());
+        M3u8Download m3u8Download = new M3u8Download(record.getUrl());
         //设置生成目录
         m3u8Download.setDir(downDir + record.getAuthor() + Constant.FILESEPARATOR);
         m3u8Download.setPageDir(downPageDir + record.getAuthor() + Constant.FILESEPARATOR);
@@ -189,9 +192,11 @@ public class CommonTask {
         m3u8Download.setId(record.getId());
         m3u8Download.setRecordService(recordService);
         m3u8Download.setRecordPageService(recordPageService);
+        m3u8Download.setTranscodeService(transcodeService);
 //        m3u8Download.setAnalysisDownUrlUtils(analysisDownUrlUtils);
         m3u8Download.setStartTime(LocalDateTime.now());
-        m3u8Download.setOverPage(recordPageService.list(new LambdaQueryWrapper<RecordPage>().select(RecordPage::getNum).eq(RecordPage::getPId, record.getId())).stream().map(RecordPage::getNum).collect(Collectors.toSet()));
+        List<RecordPage> pageList = recordPageService.list(new LambdaQueryWrapper<RecordPage>().select(RecordPage::getNum, RecordPage::getName).eq(RecordPage::getPId, record.getId()));
+        m3u8Download.setOverPage(pageList.stream().collect(Collectors.toMap(RecordPage::getNum, RecordPage::getName)));
         m3u8Download.setPicUrl(record.getPicUrl());
         m3u8Download.setFailNum(record.getFailNum());
         //添加额外请求头
@@ -215,25 +220,29 @@ public class CommonTask {
         int num = 0;
         int pageNow = 1;
         List<Record> list = new ArrayList<>();
-        while (num < pageSize) {
-            Page<Record> page = new Page<>(pageNow++, pageSize);
-            List<Record> recordPage = recordService.pagePageUrl(page, Constant.index);
-            if (recordPage.size() == 0) {
-                break;
-            }
-            Date date = new Date();
-            for (Record record : recordPage) {
-                if (StringUtils.isNotBlank(record.getPageUrl())) {
-                    Record result = analysisDownUrlUtils.analysisUrl(record, 0, date);
-                    list.add(result);
-                    if (null == result.getState()) {
-                        num++;
+        try {
+            while (num < pageSize) {
+                Page<Record> page = new Page<>(pageNow++, pageSize);
+                List<Record> recordPage = recordService.list(page, new LambdaQueryWrapper<Record>().gt(Record::getId, CacheUtils.getLastCacheRecordKey()).eq(Record::getState, RecordEnum.PAUSE_DOWN.getCode()).eq(Record::getIndex, Constant.index));
+                if (recordPage.size() == 0) {
+                    break;
+                }
+                Date date = new Date();
+                for (Record record : recordPage) {
+                    if (StringUtils.isNotBlank(record.getPageUrl())) {
+                        Record result = analysisDownUrlUtils.analysisUrl(record, date);
+                        list.add(result);
+                        if (RecordEnum.PARSE_DOWNLOAD_FAIL.getCode() != result.getState()) {
+                            num++;
+                        }
                     }
                 }
             }
+        } catch (Exception e) {
+            log.error("解析页面失败", e);
         }
         if (list.size() > 0) {
-            recordService.updateBatchSelective(list);
+            recordService.updateBatchById(list);
             return true;
         }
         return false;

@@ -5,6 +5,7 @@ import com.asuala.mock.enums.state.ChannelEnum;
 import com.asuala.mock.enums.state.RecordEnum;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.mapper.*;
+import com.asuala.mock.utils.ConstantMethodUtils;
 import com.asuala.mock.vo.*;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -48,9 +49,7 @@ public class CommonSpiderTask {
     @Value("${down.proxy.port:7890}")
     private int proxyPort;
 
-    private static final String regexSpecial = "[\\\\/:*?\"<>|]";
-    private static final String regexSpace = "\\s+";
-    private static final String replacement = " ";
+
 
     private static boolean excuteFlag = true;
 
@@ -117,7 +116,7 @@ public class CommonSpiderTask {
                 Element titleA = element.selectFirst("span.title a");
                 String picUrl = element.selectFirst("img.js-pop").attr("src");
                 String href = titleA.attr("href");
-                String title = removeSpecialCharacters(titleA.attr("title"));
+                String title = ConstantMethodUtils.removeSpecialCharacters(titleA.attr("title"));
 
                 String authorLi = tmpAuthor;
                 titleEle = element.selectFirst("div.usernameWrap a");
@@ -130,7 +129,7 @@ public class CommonSpiderTask {
                 channelDetails.setUrl(domian + href);
                 channelDetails.setPicUrl(picUrl);
                 channelDetails.setName(title);
-                channelDetails.setAuthor(removeSpecialCharacters(authorLi));
+                channelDetails.setAuthor(ConstantMethodUtils.removeSpecialCharacters(authorLi));
                 channelDetails.setCreateTime(date);
                 channelDetails.setState(ChannelDetailsEnum.UNTREATED.getCode());
                 Long rId = recordMapper.findIdByNameAndAuthor(title, authorLi);
@@ -157,8 +156,8 @@ public class CommonSpiderTask {
                         Record record = new Record();
                         record.setName(title);
                         record.setCreateTime(date);
-                        record.setState(RecordEnum.UNTREATED.getCode());
-                        record.setDelFlag(1);
+                        record.setState(RecordEnum.PAUSE_DOWN.getCode());
+                        record.setDelFlag(0);
                         record.setPageUrl(domian + href);
                         record.setAuthor(authorLi);
                         record.setPicUrl(picUrl);
@@ -218,9 +217,5 @@ public class CommonSpiderTask {
         return protocolAndDomain;
     }
 
-    private static String removeSpecialCharacters(String fileName) {
-        fileName = fileName.replaceAll(regexSpecial, replacement);
-        fileName = fileName.replaceAll(regexSpace, replacement);
-        return fileName.trim();
-    }
+
 }

@@ -149,7 +149,7 @@ public class FileChangeListener implements FileMonitor.FileListener {
         try {
             HttpUtil.post(addUrl, JSON.toJSONString(req));
         } catch (Exception e) {
-            log.error("发送es请求失败 文件id: {}", fileInfo.getId());
+            log.error("发送es请求失败 文件id: {}", fileInfo.getId(), e);
         }
     }
 
@@ -161,7 +161,7 @@ public class FileChangeListener implements FileMonitor.FileListener {
         try {
             HttpUtil.post(delUrl, JSON.toJSONString(req));
         } catch (Exception e) {
-            log.error("发送es请求失败 文件id: {}", fileInfo.getId());
+            log.error("发送es请求失败 文件id: {}", fileInfo.getId(), e);
         }
     }
 }

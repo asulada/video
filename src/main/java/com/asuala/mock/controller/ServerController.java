@@ -10,6 +10,7 @@ import com.asuala.mock.service.FileInfoService;
 import com.asuala.mock.service.RecordService;
 import com.asuala.mock.service.ServerService;
 import com.asuala.mock.utils.MD5Utils;
+import com.asuala.mock.utils.TimeUtils;
 import com.asuala.mock.vo.FileInfo;
 import com.asuala.mock.vo.Record;
 import com.asuala.mock.vo.req.FileInfoReq;
@@ -174,29 +175,30 @@ public class ServerController {
             log.debug("没有指定分片客户端 默认: {} 文件名: {}", Constant.index, req.getFileName());
             req.setIndex(Constant.index);
         }
-        Record result = recordService.getLastSameFile(req);
-        if (null != result) {
-            result.setUrl(req.getUrl());
-            result.setUpdateTime(new Date());
-            result.setDelFlag(0);
-            result.setPageUrl(req.getPageUrl());
-            result.setIndex(req.getIndex());
-            result.setPicUrl(req.getPicUrl());
-            recordService.updateByPrimaryKeySelective(result);
-        } else {
-            //        down(req.getFileName(),req.getUrl());
-            result = new Record();
-            result.setName(req.getFileName());
-            result.setUrl(req.getUrl());
-            result.setCreateTime(new Date());
-            result.setQuality(req.getQuality());
-            result.setState(RecordEnum.UNTREATED.getCode());
-            result.setAuthor(req.getAuthor());
-            result.setPageUrl(req.getPageUrl());
-            result.setIndex(req.getIndex());
-            result.setPicUrl(req.getPicUrl());
-            recordService.save(result);
-        }
+//        Record result = recordService.getLastSameFile(req);
+//        if (null != result) {
+//            result.setUrl(req.getUrl());
+//            result.setUpdateTime(new Date());
+//            result.setDelFlag(0);
+//            result.setPageUrl(req.getPageUrl());
+//            result.setIndex(req.getIndex());
+//            result.setPicUrl(req.getPicUrl());
+//            recordService.updateByPrimaryKeySelective(result);
+//        } else {
+        //        down(req.getFileName(),req.getUrl());
+        Record result = new Record();
+        result.setName(req.getFileName());
+        result.setUrl(req.getUrl());
+        result.setCreateTime(new Date());
+        result.setQuality(req.getQuality());
+        result.setState(RecordEnum.UNTREATED.getCode());
+        result.setAuthor(req.getAuthor());
+        result.setPageUrl(req.getPageUrl());
+        result.setIndex(req.getIndex());
+        result.setPicUrl(req.getPicUrl());
+        result.setTimeHum(TimeUtils.convertSecondsToHMS(req.getDuration()));
+        recordService.save(result);
+//        }
 
         res.put("code", 200);
         return res;

@@ -44,4 +44,5 @@ public class Record {
 
     private Integer failNum;
 
+    private String timeHum;
 }

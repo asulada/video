@@ -17,5 +17,5 @@ public class UrlReq {
     private Integer index;
     private boolean dbDlick = false;
     private String picUrl;
-
+    private long duration;
 }

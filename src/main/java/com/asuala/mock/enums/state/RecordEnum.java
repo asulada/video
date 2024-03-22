@@ -17,6 +17,7 @@ public enum RecordEnum {
     TXT_DOWNLOADED(3,"txt已下载"),
     PARSE_DOWNLOAD_FAIL(4,"解析下载地址失败"),
     FORBID_DOWN(5,"禁止下载"),
+    PAUSE_DOWN(6,"暂停下载"),
     ;
 
     RecordEnum(int code, String desc) {

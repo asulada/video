@@ -7,6 +7,8 @@ import org.apache.commons.lang3.StringUtils;
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -28,6 +30,9 @@ public class CacheUtils {
 
 
     private static Lock cacheRecordLock = new ReentrantLock();
+
+    // 创建一个初始值为 null 的 AtomicReference 对象
+    public static AtomicBoolean transcodeAtomic = new AtomicBoolean(false);
 
     public static void setCacheRecord(List<Record> list) {
         cacheRecordLock.lock();
