@@ -271,44 +271,53 @@ public class M3u8Download {
                 }
             }
 
-            if (finishedCount.get() == page) {
-                info("下载完成，正在合并文件！有 {} 个 共 {} 个！ {}", finishedFiles.size(), page, StringUtils.convertToDownloadSpeedNomal(getFileBytes(), 3));
-                //开始合并视频
-                File video = mergeTs();
-                info("合并完成!");
-                downPic();
-                //删除多余的ts片段
-                deleteFiles();
-                recordService.success(id);
-                CacheUtils.setLastId(id);
-                CacheUtils.x = 0;
-                //TODO-asuala 2024-03-19: 转码
-                while (!CacheUtils.transcodeAtomic.compareAndSet(false, true)) {
-                    try {
-                        Thread.sleep(5000L);
-                    } catch (InterruptedException e) {
-                        error("睡眠失败");
+            try {
+                if (finishedCount.get() == page) {
+                    info("下载完成，正在合并文件！有 {} 个 共 {} 个！ {}", finishedFiles.size(), page, StringUtils.convertToDownloadSpeedNomal(getFileBytes(), 3));
+                    //开始合并视频
+                    File video = mergeTs();
+                    info("合并完成!");
+                    downPic();
+                    //删除多余的ts片段
+                    deleteFiles();
+                    recordService.success(id);
+                    CacheUtils.setLastId(id);
+                    CacheUtils.x = 0;
+                    //TODO-asuala 2024-03-19: 转码
+                    while (!CacheUtils.transcodeAtomic.compareAndSet(false, true)) {
+                        try {
+                            Thread.sleep(5000L);
+                        } catch (InterruptedException e) {
+                            error("睡眠失败");
+                        }
                     }
-                }
-                try {
-                    transcodeService.ranscodeVideo(video);
-                } catch (Exception e) {
-                    error("转码失败");
-                }
+                    try {
+                        transcodeService.ranscodeVideo(video);
+                    } catch (Exception e) {
+                        error("转码失败");
+                    }
 
+                    CacheUtils.transcodeAtomic.set(false);
+                    CommonTask.downloads.remove(fileName);
+
+                } else if (failCount.get() > 0) {
+                    error("ts片段下载失败");
+                    recordService.pauseRecord(id, fileName, failNum);
+                    stopDown();
+                } else if (stopFlag) {
+                    error("暂停任务");
+                    CacheUtils.downFlag(LocalDateTime.now());
+                    stopDown();
+                } else {
+                    error("下载失败 !!!");
+                }
+            } catch (Exception e) {
+                error("保存下载信息失败", e);
                 CacheUtils.transcodeAtomic.set(false);
                 CommonTask.downloads.remove(fileName);
+                CacheUtils.removeCacheRecord(id);
+                CacheUtils.setLastId(id);
 
-            } else if (failCount.get() > 0) {
-                error("ts片段下载失败");
-                recordService.pauseRecord(id, fileName, failNum);
-                stopDown();
-            } else if (stopFlag) {
-                error("暂停任务");
-                CacheUtils.downFlag(LocalDateTime.now());
-                stopDown();
-            } else {
-                error("下载失败 !!!");
             }
 
 //                String msg = fileName + " 下载完成";
@@ -556,7 +565,7 @@ public class M3u8Download {
                             failCount.incrementAndGet();
                             stopFlag = true;
                             return;
-                        } else if (resCode == SKIP_CDDE) {
+                        } else if (resCode == SKIP_CDDE || resCode == SERVICE_NOT_AVALIABLE_CDDE) {
                             debugName(partName, "连接下载地址被终止, 暂停当前线程任务！ 返回码:{}", resCode, e);
                             stopFlag = true;
 //                                skipPage.incrementAndGet();
@@ -855,52 +864,51 @@ public class M3u8Download {
 
 
     private void error(String msg) {
-        log.error("{} " + msg, fileName);
+        log.error(fileName + " " + msg);
     }
 
     private void error(String msg, Object... arr) {
-        log.error("{} " + msg, fileName, arr);
+        log.error(fileName + " " + msg, arr);
     }
 
     private void errorName(String name, String msg, Object... arr) {
-        log.error("{} " + msg, name, arr);
+        log.error(name + " " + msg, arr);
     }
 
     private void info(String msg) {
-        log.info("{} " + msg, fileName);
+        log.info(fileName + " " + msg);
     }
 
     private void info(String msg, Object... arr) {
-        log.info("{} " + msg, fileName, arr);
+        log.info(fileName + " " + msg, arr);
     }
 
     private void infoName(String name, String msg, Object... arr) {
-        log.info("{} " + msg, name, arr);
+        log.info(name + " " + msg, arr);
     }
 
     private void debug(String msg) {
-        log.debug("{} " + msg, fileName);
+        log.debug(fileName + " " + msg);
     }
 
     private void debug(String msg, Object... arr) {
-        log.debug("{} " + msg, fileName, arr);
+        log.debug(fileName + " " + msg, arr);
     }
 
     private void debugName(String name, String msg, Object... arr) {
-        log.debug("{} " + msg, name, arr);
+        log.debug(name + " " + msg, arr);
     }
 
-
     private void warn(String msg) {
-        log.warn("{} " + msg, fileName);
+        log.warn(fileName + " {}", msg);
     }
 
     private void warn(String msg, Object... arr) {
-        log.warn("{} " + msg, fileName, arr);
+        log.warn(fileName + " " + msg, arr);
     }
 
     private void warnName(String name, String msg, Object... arr) {
-        log.warn("{} " + msg, name, arr);
+        log.warn(name + " " + msg, arr);
     }
 }
 

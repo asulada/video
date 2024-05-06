@@ -1,4 +1,4 @@
-package com.asuala.mock.file.monitor.vo;
+package com.asuala.mock.file.monitor.win.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

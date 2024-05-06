@@ -138,7 +138,10 @@ public class CommonTask {
                     break;
                 }
                 CacheUtils.setLastId(record.getId());
-                downloads.put(fileName, down(fileName, record));
+                M3u8Download down = down(fileName, record);
+                downloads.put(fileName, down);
+                //开始下载
+                down.start();
                 break;
             }
 
@@ -205,8 +208,7 @@ public class CommonTask {
         m3u8Download.addRequestHeaderMap(headersMap);*/
         //如果需要的话设置http代理
         m3u8Download.setProxy(proxyIp, proxyPort);
-        //开始下载
-        m3u8Download.start();
+
         return m3u8Download;
     }
 

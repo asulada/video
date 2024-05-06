@@ -50,7 +50,6 @@ public class CommonSpiderTask {
     private int proxyPort;
 
 
-
     private static boolean excuteFlag = true;
 
     @Scheduled(cron = "0 0/1 * * * ?")
@@ -162,6 +161,7 @@ public class CommonSpiderTask {
                         record.setAuthor(authorLi);
                         record.setPicUrl(picUrl);
                         record.setIndex(Constant.index);
+                        record.setFailNum(0);
                         recordList.add(record);
                     }
                 }

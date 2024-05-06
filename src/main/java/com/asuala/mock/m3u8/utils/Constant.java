@@ -43,5 +43,6 @@ public class Constant {
     public static final int STOP_CDDE = 472;
     public static final int SKIP_CDDE = 429;
     public static final int FORBIDDEN_CDDE = 403;
+    public static final int SERVICE_NOT_AVALIABLE_CDDE = 503;
 
 }

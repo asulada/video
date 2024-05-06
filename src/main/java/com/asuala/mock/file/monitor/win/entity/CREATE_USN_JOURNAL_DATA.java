@@ -1,4 +1,4 @@
-package com.asuala.mock.file.monitor.entity;
+package com.asuala.mock.file.monitor.win.entity;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;

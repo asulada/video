@@ -1,4 +1,4 @@
-package com.asuala.mock.file.monitor.enums;
+package com.asuala.mock.file.monitor.win.enums;
 
 import com.sun.jna.platform.FileMonitor;
 import lombok.Getter;
