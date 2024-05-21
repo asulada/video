@@ -1,8 +1,11 @@
 package com.asuala.mock.service;
 
+import com.asuala.mock.file.monitor.linux.InotifyLibraryUtil;
 import com.asuala.mock.file.monitor.win.FileChangeListener;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.mapper.FileInfoMapper;
+import com.asuala.mock.utils.CPUUtils;
+import com.asuala.mock.vo.Index;
 import com.sun.jna.platform.FileMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @description:
@@ -24,31 +28,28 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "down", name = "client", havingValue = "true")
 public class ClientService {
 
-    private final FileInfoMapper fileInfoMapper;
+    private final FileInfoService fileInfoService;
 
     @Value("${watch.dir}")
-    private List<String> dirs;
+    private Set<String> dirs;
 
-    @Value("${down.http.addUrl}")
-    private String addUrl;
-    @Value("${down.http.delUrl}")
-    private String delUrl;
-    @Value("${down.http.salt}")
-    private String salt;
 
-    @PostConstruct
-    public void initFileInfo() throws Exception {
-        FileMonitor fileMonitor = FileMonitor.getInstance();
+    public void initFileInfo(Index cpuId) throws Exception {
+        if (cpuId.getSystem().contains("LINUX")){
+            InotifyLibraryUtil.init(dirs);
+        }else {
+            FileMonitor fileMonitor = FileMonitor.getInstance();
+            for (String dir : dirs) {
+                fileMonitor.addFileListener(new FileChangeListener(fileInfoService, dir));
+                File file = new File(dir);
+                if (!file.exists()) {
+                    file.mkdirs();
+                }
+                fileMonitor.addWatch(file);
 
-        for (String dir : dirs) {
-            fileMonitor.addFileListener(new FileChangeListener(fileInfoMapper, dir, addUrl, delUrl, salt));
-            File file = new File(dir);
-            if (!file.exists()) {
-                file.mkdirs();
+                Constant.volumeNos.add(dir.substring(0, dir.indexOf(":") + 1));
             }
-            fileMonitor.addWatch(file);
-
-            Constant.volumeNos.add(dir.substring(0, dir.indexOf(":") + 1));
         }
+
     }
 }

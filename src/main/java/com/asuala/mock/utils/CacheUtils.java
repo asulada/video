@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -19,7 +20,10 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class CacheUtils {
 
+    public static boolean watchFlag = true;
 
+
+    public static ConcurrentLinkedQueue queue = new ConcurrentLinkedQueue();
     //缓存过期时间 单位 s
     public static final int expireTime = 120;
 

@@ -1,16 +1,35 @@
 package com.asuala.mock.service;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.http.HttpUtil;
+import com.alibaba.fastjson2.JSON;
+import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.mapper.FileInfoMapper;
+import com.asuala.mock.utils.MD5Utils;
 import com.asuala.mock.vo.FileInfo;
+import com.asuala.mock.vo.req.FileInfoReq;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+@Slf4j
 @Service
 public class FileInfoService extends ServiceImpl<FileInfoMapper, FileInfo> {
+
+    @Value("${down.http.addUrl}")
+    private String addUrl;
+    @Value("${down.http.delUrl}")
+    private String delUrl;
+    @Value("${down.http.salt}")
+    private String salt;
 
     private static final Lock lock = new ReentrantLock();
 
@@ -60,4 +79,76 @@ public class FileInfoService extends ServiceImpl<FileInfoMapper, FileInfo> {
         return i;
     }
 
+
+    public FileInfo findFileInfo(File file) {
+        List<FileInfo> list = baseMapper.selectList(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getName, file.getName()).eq(FileInfo::getIndex, Constant.index));
+        FileInfo fileInfo = null;
+        for (FileInfo info : list) {
+            if (info.getPath().equals(file.getAbsolutePath())) {
+                fileInfo = info;
+                break;
+            }
+        }
+        return fileInfo;
+    }
+
+    public FileInfo findFileInfo(String name, String path) {
+        List<FileInfo> list = baseMapper.selectList(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getName, name).eq(FileInfo::getIndex, Constant.index));
+        FileInfo fileInfo = null;
+        for (FileInfo info : list) {
+            if (info.getPath().equals(path)) {
+                fileInfo = info;
+                break;
+            }
+        }
+        return fileInfo;
+    }
+
+    public void insert(File file) {
+        FileInfo.FileInfoBuilder builder = FileInfo.builder().name(file.getName()).path(file.getAbsolutePath()).createTime(new Date()).index(Constant.index).changeTime(new Date(file.lastModified()));
+        if (file.isFile()) {
+            String suffix = FileUtil.getSuffix(file);
+            if (suffix.length() > 20) {
+                log.warn("文件后缀名过长: {}", file.getAbsolutePath());
+                return;
+            }
+            builder.size(file.length()).suffix(suffix).dir(0);
+        } else {
+            builder.dir(1);
+        }
+        FileInfo fileInfo = builder.build();
+        baseMapper.insert(fileInfo);
+        saveEs(fileInfo);
+    }
+
+
+
+    public void saveEs(FileInfo fileInfo) {
+        FileInfoReq req = new FileInfoReq();
+        req.setId(fileInfo.getId());
+        req.setName(fileInfo.getName());
+        req.setPath(fileInfo.getPath());
+        req.setSuffix(fileInfo.getSuffix());
+        req.setSize(fileInfo.getSize());
+        req.setChangeTime(fileInfo.getChangeTime());
+        req.setIndex(fileInfo.getIndex());
+        req.setSign(MD5Utils.getSaltMD5(fileInfo.getName(), salt));
+        try {
+            HttpUtil.post(addUrl, JSON.toJSONString(req));
+        } catch (Exception e) {
+            log.error("发送es请求失败 文件id: {}", fileInfo.getId(), e);
+        }
+    }
+
+    public void delEs(FileInfo fileInfo) {
+        FileInfoReq req = new FileInfoReq();
+        req.setId(fileInfo.getId());
+        req.setSign(MD5Utils.getSaltMD5(fileInfo.getName(), salt));
+        req.setName(fileInfo.getName());
+        try {
+            HttpUtil.post(delUrl, JSON.toJSONString(req));
+        } catch (Exception e) {
+            log.error("发送es请求失败 文件id: {}", fileInfo.getId(), e);
+        }
+    }
 }

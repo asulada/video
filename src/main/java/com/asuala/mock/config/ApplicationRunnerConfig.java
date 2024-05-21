@@ -2,10 +2,12 @@ package com.asuala.mock.config;
 
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
+import com.asuala.mock.file.monitor.linux.InotifyLibraryUtil;
 import com.asuala.mock.file.monitor.win.utils.MonitorFileUtil;
 import com.asuala.mock.file.monitor.win.vo.FileTreeNode;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.mapper.FileInfoMapper;
+import com.asuala.mock.service.ClientService;
 import com.asuala.mock.service.FileInfoService;
 import com.asuala.mock.service.IndexService;
 import com.asuala.mock.utils.CPUUtils;
@@ -40,6 +42,7 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
 
     private final FileInfoMapper fileInfoMapper;
     private final FileInfoService fileInfoService;
+    private final ClientService clientService;
 
     @Value("${watch.rebuldFlag:false}")
     private boolean rebuldFlag;
@@ -56,10 +59,10 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
+        Index index = CPUUtils.getCpuId();
 
         if (client) {
             try {
-                Index index = CPUUtils.getCpuId();
                 Index one = indexService.findByCpuId(index.getCpuId());
                 Date now = new Date();
                 if (null == one) {
@@ -87,11 +90,18 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
                         count = fileInfoMapper.deleteLimit(Constant.index);
                     }
                 }
-                for (String volumeNo : Constant.volumeNos) {
-                    TreeMap<Long, FileTreeNode> map = MonitorFileUtil.buildFileInfo(volumeNo);
+                clientService.initFileInfo(index);
+
+                if (index.getSystem().contains("LINUX")) {
+                    InotifyLibraryUtil.rebuild(Constant.volumeNos);
+                } else {
                     MonitorFileUtil.fileInfoServicel = fileInfoService;
-                    MonitorFileUtil.getFileInfo(map, volumeNo);
+                    for (String volumeNo : Constant.volumeNos) {
+                        TreeMap<Long, FileTreeNode> map = MonitorFileUtil.buildFileInfo(volumeNo);
+                        MonitorFileUtil.getFileInfo(map, volumeNo);
+                    }
                 }
+
                 RebuildReq req = new RebuildReq();
                 req.setIndex(Constant.index);
                 req.setSign(MD5Utils.getSaltMD5(String.valueOf(Constant.index), salt));
@@ -100,6 +110,8 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
                 } catch (Exception e) {
                     log.error("发送重建数据请求失败id: {}", Constant.index, e);
                 }
+            }else {
+                clientService.initFileInfo(index);
             }
 
         } else {

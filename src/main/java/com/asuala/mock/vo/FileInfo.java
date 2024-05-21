@@ -57,4 +57,5 @@ public class FileInfo {
 
     @TableField("`index`")
     private Integer index;
+
 }
