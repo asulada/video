@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -29,6 +31,12 @@ public class FileListener {
     private final FileInfoService fileInfoService;
 
     public static ExecutorService fixedThreadPool;
+    //.swp .swx
+    private static final List<String> exlude=new ArrayList<String>(){{
+        add(".swp");
+        add(".swx");
+    }};
+
 
     @PostConstruct
     public void consumer() {
@@ -45,6 +53,12 @@ public class FileListener {
                         if ((mask & IN_ISDIR) != 0) {
                             mask -= IN_ISDIR;
                             isDir = true;
+                        }else {
+                            for (String suffix : exlude) {
+                                if (poll.getName().endsWith(suffix)){
+                                    continue;
+                                }
+                            }
                         }
                         FileInfo fileInfo;
                         switch (mask) {

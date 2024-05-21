@@ -27,7 +27,6 @@ import static com.asuala.mock.file.monitor.linux.Constant.*;
 @Slf4j
 public class InotifyLibraryUtil {
 
-    //.swp .swx
 
 
     public static ExecutorService fixedThreadPool;
