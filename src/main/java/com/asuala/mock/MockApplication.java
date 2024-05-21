@@ -23,10 +23,10 @@ public class MockApplication {
         HttpGlobalConfig.setTimeout(10000);
         SpringApplication.run(MockApplication.class, args);
         // 自定义关闭钩子逻辑
-        Runtime.getRuntime().addShutdownHook(new Thread(()->{
-            System.out.println("Ctrl+C 被触发，执行关闭逻辑...");
+//        Runtime.getRuntime().addShutdownHook(new Thread(()->{
+//            System.out.println("Ctrl+C 被触发，执行关闭逻辑...");
             // 在这里添加你的关闭逻辑
-        }));
+//        }));
     }
 
     @Bean

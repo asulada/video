@@ -28,9 +28,11 @@ public class FileListener {
 
     private final FileInfoService fileInfoService;
 
+    public static ExecutorService fixedThreadPool;
+
     @PostConstruct
     public void consumer() {
-        ExecutorService fixedThreadPool = Executors.newFixedThreadPool(1);
+        fixedThreadPool = Executors.newFixedThreadPool(1);
         fixedThreadPool.execute(() -> {
             while (CacheUtils.watchFlag) {
                 FileVo poll = (FileVo) CacheUtils.queue.poll();

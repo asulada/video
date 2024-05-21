@@ -60,7 +60,7 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         Index index = CPUUtils.getCpuId();
-
+        MainConstant.systemInfo = index;
         if (client) {
             try {
                 Index one = indexService.findByCpuId(index.getCpuId());
@@ -110,7 +110,7 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
                 } catch (Exception e) {
                     log.error("发送重建数据请求失败id: {}", Constant.index, e);
                 }
-            }else {
+            } else {
                 clientService.initFileInfo(index);
             }
 

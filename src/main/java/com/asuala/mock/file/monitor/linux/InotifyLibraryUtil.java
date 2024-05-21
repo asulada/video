@@ -149,7 +149,6 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
     }
 
     public static CopyOnWriteArrayList<FileInfo>[][] rebuild(Set<String> dirs) throws IOException {
-        fixedThreadPool = Executors.newFixedThreadPool(dirs.size());
         CopyOnWriteArrayList<FileInfo>[][] dirFileArray = new CopyOnWriteArrayList[dirs.size()][2];
         int i = 0;
         for (String dir : dirs) {
@@ -159,6 +158,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
     }
 
     public static void init(Set<String> dirs) throws IOException {
+        fixedThreadPool = Executors.newFixedThreadPool(dirs.size());
         for (String dir : dirs) {
             List<String> dirPaths = findDir(dir);
             fixedThreadPool.execute(new Watch(dirPaths));
