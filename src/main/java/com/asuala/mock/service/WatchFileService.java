@@ -3,8 +3,6 @@ package com.asuala.mock.service;
 import com.asuala.mock.file.monitor.linux.InotifyLibraryUtil;
 import com.asuala.mock.file.monitor.win.FileChangeListener;
 import com.asuala.mock.m3u8.utils.Constant;
-import com.asuala.mock.mapper.FileInfoMapper;
-import com.asuala.mock.utils.CPUUtils;
 import com.asuala.mock.vo.Index;
 import com.sun.jna.platform.FileMonitor;
 import lombok.RequiredArgsConstructor;
@@ -13,9 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import java.io.File;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -26,7 +22,7 @@ import java.util.Set;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "down", name = "client", havingValue = "true")
-public class ClientService {
+public class WatchFileService {
 
     private final FileInfoService fileInfoService;
 

@@ -35,7 +35,7 @@ public class ServerTask {
         recordPageService.deleteComplete();
     }
 
-    @Scheduled(cron = "0 0/1 * * * ?")
+    @Scheduled(cron = "0 0/30 * * * ?")
     public void checkIndex() {
         LocalDateTime now = LocalDateTime.now();
         List<Index> list = indexService.list(new LambdaQueryWrapper<Index>().ge(Index::getUpdateTime, now.minusMinutes(40).format(formatter)));

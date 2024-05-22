@@ -79,7 +79,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
 
     public static void test001() {
         int fd = InotifyLibrary.INSTANCE.inotify_init();
-        String pathname = "/home/zhong/test";
+        String pathname = "/mnt/nfts5";
         int wd = InotifyLibrary.INSTANCE.inotify_add_watch(fd, pathname,
                 IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_MODIFY | IN_DELETE_SELF | IN_MOVE_SELF);
 
@@ -270,7 +270,11 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                         fileVo.setName(name);
                         fileVo.setCode(mask);
                         CacheUtils.queue.offer(fileVo);
-
+                        boolean isDir = false;
+                        if ((mask & IN_ISDIR) != 0) {
+                            mask -= IN_ISDIR;
+                            isDir = true;
+                        }
                     }
                 }
             } finally {

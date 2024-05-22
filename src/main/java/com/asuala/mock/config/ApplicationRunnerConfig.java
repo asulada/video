@@ -7,9 +7,10 @@ import com.asuala.mock.file.monitor.win.utils.MonitorFileUtil;
 import com.asuala.mock.file.monitor.win.vo.FileTreeNode;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.mapper.FileInfoMapper;
-import com.asuala.mock.service.ClientService;
+import com.asuala.mock.service.WatchFileService;
 import com.asuala.mock.service.FileInfoService;
 import com.asuala.mock.service.IndexService;
+import com.asuala.mock.task.CommonTask;
 import com.asuala.mock.utils.CPUUtils;
 import com.asuala.mock.utils.MD5Utils;
 import com.asuala.mock.vo.FileInfo;
@@ -42,7 +43,8 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
 
     private final FileInfoMapper fileInfoMapper;
     private final FileInfoService fileInfoService;
-    private final ClientService clientService;
+    private final WatchFileService clientService;
+    private final CommonTask commonTask;
 
     @Value("${watch.rebuldFlag:false}")
     private boolean rebuldFlag;
@@ -54,6 +56,8 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
     private String rebuildUrl;
     @Value("${watch.deleteLimit:1000000}")
     private int deleteLimit;
+    @Value("#{watch.open}")
+    private boolean watchOpen;
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -61,25 +65,7 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         Index index = CPUUtils.getCpuId();
         MainConstant.systemInfo = index;
-        if (client) {
-            try {
-                Index one = indexService.findByCpuId(index.getCpuId());
-                Date now = new Date();
-                if (null == one) {
-                    index.setCreateTime(now);
-                    index.setUpdateTime(now);
-                    indexService.save(index);
-                    one = index;
-                } else {
-                    one.setDelFlag(0);
-                    one.setUpdateTime(now);
-                    indexService.updateById(one);
-                }
-                Constant.index = Integer.parseInt(one.getId().toString());
-            } catch (Exception e) {
-                log.error("获取cpuid失败", e);
-            }
-
+        if (watchOpen) {
             if (rebuldFlag) {
                 //TODO-asuala 2024-02-02: 删除表数据
                 Long count = fileInfoMapper.selectCount(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getIndex, Constant.index));
@@ -114,6 +100,26 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
                 clientService.initFileInfo(index);
             }
 
+        }
+        if (client) {
+            try {
+                Index one = indexService.findByCpuId(index.getCpuId());
+                Date now = new Date();
+                if (null == one) {
+                    index.setCreateTime(now);
+                    index.setUpdateTime(now);
+                    indexService.save(index);
+                    one = index;
+                } else {
+                    one.setDelFlag(0);
+                    one.setUpdateTime(now);
+                    indexService.updateById(one);
+                }
+                Constant.index = Integer.parseInt(one.getId().toString());
+            } catch (Exception e) {
+                log.error("获取cpuid失败", e);
+            }
+            commonTask.addTask();
         } else {
             LocalDateTime now = LocalDateTime.now();
             List<Index> list = indexService.list(new LambdaQueryWrapper<Index>().ge(Index::getUpdateTime, now.minusMinutes(40).format(formatter)));

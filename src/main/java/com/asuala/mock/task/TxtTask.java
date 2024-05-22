@@ -38,7 +38,7 @@ public class TxtTask {
     @Value("${down.search.pageSize:5}")
     private int pageSize;
 
-    @Scheduled(cron = "*/15 * * * * ?")
+    @Scheduled(cron = "0 2 0/1 * * ?")
     public void txt() {
         int pageNow = 1;
         List<Long> txtIds = new ArrayList<>();

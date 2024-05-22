@@ -74,10 +74,10 @@ logging:
 
 down:
   server: false
-  client: true
-  txtRole: true
-  downCron: "*/5 * * * * ?"
-  addTaskCron: "0 0/1 * * * ?"
+  client: false
+  txtRole: false
+  downCron: "0 0/1 * * * ?"
+  addTaskCron: "0 0/10 * * * ?"
   html:
     video:
       list: ${env.down.html.video.list}
@@ -98,10 +98,11 @@ down:
     childthread: 10
     pauseSecond: 60
   search:
-    pageSize: 10
+    pageSize: 60
 
 watch:
-  dir: "d:\\a\\,e:\\a\\"
+  open: true
+  dir: "/"
   rebuldFlag: false
   deleteLimit: 2000000
 
