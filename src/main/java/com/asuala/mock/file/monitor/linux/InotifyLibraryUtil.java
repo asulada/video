@@ -227,7 +227,6 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
 
         private int fd;
         private Map<Integer, String> wdMap;
-        private Map<String, Integer> wdStrMap;
         private List<String> paths;
         private int size = 4096;
 
@@ -281,7 +280,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                         if (mask == IN_DELETE_SELF) {
                             filePath = filePath.substring(0, filePath.length() - 2);
                             isDir = true;
-                            removeWatchDir(path);
+                            removeWatchDir(wd2);
                         } else if (mask == IN_CREATE) {
                             filePath = filePath.substring(0, filePath.length() - 2);
                             addWatchDir(filePath);
@@ -314,17 +313,11 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
             int wd = InotifyLibrary.INSTANCE.inotify_add_watch(fd, path,
                     IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_DELETE_SELF);
             wdMap.put(wd, path);
-            wdStrMap.put(path, wd);
         }
 
-        private void removeWatchDir(String path) {
-            Integer code = wdStrMap.get(path);
-
-            InotifyLibrary.INSTANCE.inotify_rm_watch(fd, code);
-
-            wdStrMap.remove(path);
-            wdMap.remove(code);
-
+        private void removeWatchDir(int wd) {
+            InotifyLibrary.INSTANCE.inotify_rm_watch(fd, wd);
+            wdMap.remove(wd);
         }
     }
 
