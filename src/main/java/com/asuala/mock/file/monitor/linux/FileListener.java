@@ -5,6 +5,7 @@ import com.asuala.mock.utils.CacheUtils;
 import com.asuala.mock.vo.FileInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +27,7 @@ import static com.asuala.mock.file.monitor.linux.Constant.IN_ISDIR;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "watch", name = "open", havingValue = "true")
 public class FileListener {
 
     private final FileInfoService fileInfoService;

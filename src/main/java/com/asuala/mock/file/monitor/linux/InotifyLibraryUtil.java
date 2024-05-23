@@ -76,7 +76,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
         put(IN_MODIFY, "文件被修改");
         put(IN_UNMOUNT, "已卸载备份fs");
         put(IN_Q_OVERFLOW, "排队的事件溢出");
-        put( IN_IGNORED, "文件被忽略");
+        put(IN_IGNORED, "文件被忽略");
     }};
 
     public static void test001() {
@@ -273,10 +273,19 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                             mask -= IN_ISDIR;
                             isDir = true;
 
+                            log.debug("目录: {} 事件: {} 关联码: {} 目录名: {} ", path, event, cookie, name);
+                        } else {
+                            log.debug("目录: {} 事件: {} 关联码: {} 文件名: {} ", path, event, cookie, name);
                         }
 
-
-                        log.debug("目录: {} 事件: {} 关联码: {} 文件名: {} ", path, event, cookie, name);
+                        if (mask == IN_DELETE_SELF) {
+                            filePath = filePath.substring(0, filePath.length() - 2);
+                            isDir = true;
+                            removeWatchDir(path);
+                        } else if (mask == IN_CREATE) {
+                            filePath = filePath.substring(0, filePath.length() - 2);
+                            addWatchDir(filePath);
+                        }
                         FileVo fileVo = new FileVo();
                         fileVo.setFullPath(filePath);
                         fileVo.setPath(path);
