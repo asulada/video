@@ -74,6 +74,9 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
         put(IN_DELETE_SELF, "自删除，即一个可执行文件在执行时删除自己");
         put(IN_MOVE_SELF, "自移动，即一个可执行文件在执行时移动自己");
         put(IN_MODIFY, "文件被修改");
+        put(IN_UNMOUNT, "已卸载备份fs");
+        put(IN_Q_OVERFLOW, "排队的事件溢出");
+        put( IN_IGNORED, "文件被忽略");
     }};
 
     public static void test001() {

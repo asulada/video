@@ -17,5 +17,8 @@ public class Constant {
     public static final int IN_ISDIR = 0x40000000;
     public static final int IN_MOVE_SELF = 0x00000800;
     public static final int IN_DELETE_SELF = 0x00000400;
+    public static final int IN_IGNORED = 0x00008000;//File was ignored
+    public static final int IN_UNMOUNT = 0x00002000;//File was ignored
+    public static final int IN_Q_OVERFLOW = 0x00004000;//File was ignored
 
 }
