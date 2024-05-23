@@ -12,5 +12,5 @@ public class FileVo {
     private String path;
     private String name;
     private int code;
-
+    private boolean isDir;
 }

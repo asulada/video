@@ -28,7 +28,6 @@ import static com.asuala.mock.file.monitor.linux.Constant.*;
 public class InotifyLibraryUtil {
 
 
-
     public static ExecutorService fixedThreadPool;
 
     public static ConcurrentLinkedQueue queue = new ConcurrentLinkedQueue();
@@ -79,8 +78,11 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
 
     public static void test001() {
         int fd = InotifyLibrary.INSTANCE.inotify_init();
-        String pathname = "/mnt/nfts5";
+        String pathname = "/mnt/nfts1/test/test1";
+        String pathname1 = "/mnt/nfts1/test/test2";
         int wd = InotifyLibrary.INSTANCE.inotify_add_watch(fd, pathname,
+                IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_MODIFY | IN_DELETE_SELF | IN_MOVE_SELF);
+        int wd1 = InotifyLibrary.INSTANCE.inotify_add_watch(fd, pathname1,
                 IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_MODIFY | IN_DELETE_SELF | IN_MOVE_SELF);
 
         int size = 4096;
@@ -104,23 +106,24 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                     i += nameLen;
                     String name = byteToStr(nameBytes);
 
-                    for (Map.Entry<Integer, String> entry : eventNameMap.entrySet()) {
-                        if ((mask & entry.getKey()) != 0) {
-                            System.out.println(entry.getValue());
-                        }
-                    }
-
+                    boolean isDir = false;
                     if ((mask & IN_ISDIR) != 0) {
-                        System.out.println("Directory: true\n");
-                    } else {
-                        System.out.println("Directory: false\n");
+                        isDir = true;
+                        mask -= IN_ISDIR;
                     }
 
-                    System.out.println("wd=" + wd2 + " mask=" + mask + " cookie=" + cookie + " name=" + name.toString());
+                    String action = "";
+                    if (eventNameMap.containsKey(mask)) {
+                        action = eventNameMap.get(mask);
+                    }
+
+
+                    System.out.println("wd=" + wd2 + " mask=" + mask + " cookie=" + cookie + (isDir ? "文件夹 " : "文件") + " name=" + name.toString() + " " + action);
                 }
             }
         } finally {
             InotifyLibrary.INSTANCE.inotify_rm_watch(fd, wd);
+            InotifyLibrary.INSTANCE.inotify_rm_watch(fd, wd1);
             InotifyLibrary.INSTANCE.close(fd);
 
         }
@@ -221,6 +224,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
 
         private int fd;
         private Map<Integer, String> wdMap;
+        private Map<String, Integer> wdStrMap;
         private List<String> paths;
         private int size = 4096;
 
@@ -233,9 +237,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
             fd = InotifyLibrary.INSTANCE.inotify_init();
 
             for (String path : paths) {
-                int wd = InotifyLibrary.INSTANCE.inotify_add_watch(fd, path,
-                        IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_DELETE_SELF);
-                wdMap.put(wd, path);
+                addWatchDir(path);
             }
 
             Pointer pointer = new Memory(size);
@@ -263,18 +265,23 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                         String path = wdMap.get(wd2);
 
                         String filePath = path + Constant.FILESEPARATOR + name;
+                        boolean isDir = false;
+                        if ((mask & IN_ISDIR) != 0) {
+                            mask -= IN_ISDIR;
+                            isDir = true;
+
+                        }
+
+
                         log.debug("目录: {} 事件: {} 关联码: {} 文件名: {} ", path, event, cookie, name);
                         FileVo fileVo = new FileVo();
                         fileVo.setFullPath(filePath);
                         fileVo.setPath(path);
                         fileVo.setName(name);
                         fileVo.setCode(mask);
+                        fileVo.setDir(isDir);
                         CacheUtils.queue.offer(fileVo);
-                        boolean isDir = false;
-                        if ((mask & IN_ISDIR) != 0) {
-                            mask -= IN_ISDIR;
-                            isDir = true;
-                        }
+
                     }
                 }
             } finally {
@@ -289,6 +296,23 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                 InotifyLibrary.INSTANCE.close(fd);
                 log.info("释放释放inotify fd {} 结束", fd);
             }
+        }
+
+        private void addWatchDir(String path) {
+            int wd = InotifyLibrary.INSTANCE.inotify_add_watch(fd, path,
+                    IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_DELETE_SELF);
+            wdMap.put(wd, path);
+            wdStrMap.put(path, wd);
+        }
+
+        private void removeWatchDir(String path) {
+            Integer code = wdStrMap.get(path);
+
+            InotifyLibrary.INSTANCE.inotify_rm_watch(fd, code);
+
+            wdStrMap.remove(path);
+            wdMap.remove(code);
+
         }
     }
 
