@@ -1,5 +1,6 @@
 package com.asuala.mock.config;
 
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
 import com.asuala.mock.file.monitor.linux.InotifyLibraryUtil;
@@ -31,6 +32,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @description:
@@ -89,7 +91,16 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
                 clientService.initFileInfo(index);
 
                 if (index.getSystem().contains("LINUX")) {
-                    InotifyLibraryUtil.rebuild(dirs);
+                    CopyOnWriteArrayList<FileInfo>[][] array = InotifyLibraryUtil.rebuild(dirs);
+                    //保存文件信息
+                    for (CopyOnWriteArrayList<FileInfo>[] fileDirArray : array) {
+                        for (CopyOnWriteArrayList<FileInfo> fileInfos : fileDirArray) {
+                            List<List<FileInfo>> split = CollectionUtil.split(fileInfos, 5000);
+                            for (List<FileInfo> infos : split) {
+                                fileInfoMapper.batchInsert(infos);
+                            }
+                        }
+                    }
                 } else {
                     MonitorFileUtil.fileInfoServicel = fileInfoService;
                     for (String volumeNo : Constant.volumeNos) {
@@ -116,7 +127,7 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
             addIndex(index);
             commonTask.addTask();
         }
-        if (server){
+        if (server) {
             LocalDateTime now = LocalDateTime.now();
             List<Index> list = indexService.list(new LambdaQueryWrapper<Index>().ge(Index::getUpdateTime, now.minusMinutes(40).format(formatter)));
             if (list.size() > 0) {
