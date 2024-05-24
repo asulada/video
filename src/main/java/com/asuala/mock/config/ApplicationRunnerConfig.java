@@ -19,6 +19,7 @@ import com.asuala.mock.vo.req.RebuildReq;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -28,6 +29,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -44,20 +46,26 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
     private final FileInfoMapper fileInfoMapper;
     private final FileInfoService fileInfoService;
     private final WatchFileService clientService;
-    private final CommonTask commonTask;
+    @Autowired(required = false)
+    private CommonTask commonTask;
+
 
     @Value("${watch.rebuldFlag:false}")
     private boolean rebuldFlag;
     @Value("${down.client}")
     private boolean client;
+    @Value("${down.server}")
+    private boolean server;
     @Value("${down.http.salt}")
     private String salt;
     @Value("${down.http.rebuildUrl}")
     private String rebuildUrl;
     @Value("${watch.deleteLimit:1000000}")
     private int deleteLimit;
-    @Value("#{watch.open}")
+    @Value("${watch.open}")
     private boolean watchOpen;
+    @Value("${watch.dir}")
+    private Set<String> dirs;
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -66,6 +74,8 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
         Index index = CPUUtils.getCpuId();
         MainConstant.systemInfo = index;
         if (watchOpen) {
+            addIndex(index);
+
             if (rebuldFlag) {
                 //TODO-asuala 2024-02-02: 删除表数据
                 Long count = fileInfoMapper.selectCount(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getIndex, Constant.index));
@@ -79,7 +89,7 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
                 clientService.initFileInfo(index);
 
                 if (index.getSystem().contains("LINUX")) {
-                    InotifyLibraryUtil.rebuild(Constant.volumeNos);
+                    InotifyLibraryUtil.rebuild(dirs);
                 } else {
                     MonitorFileUtil.fileInfoServicel = fileInfoService;
                     for (String volumeNo : Constant.volumeNos) {
@@ -101,26 +111,12 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
             }
 
         }
+
         if (client) {
-            try {
-                Index one = indexService.findByCpuId(index.getCpuId());
-                Date now = new Date();
-                if (null == one) {
-                    index.setCreateTime(now);
-                    index.setUpdateTime(now);
-                    indexService.save(index);
-                    one = index;
-                } else {
-                    one.setDelFlag(0);
-                    one.setUpdateTime(now);
-                    indexService.updateById(one);
-                }
-                Constant.index = Integer.parseInt(one.getId().toString());
-            } catch (Exception e) {
-                log.error("获取cpuid失败", e);
-            }
+            addIndex(index);
             commonTask.addTask();
-        } else {
+        }
+        if (server){
             LocalDateTime now = LocalDateTime.now();
             List<Index> list = indexService.list(new LambdaQueryWrapper<Index>().ge(Index::getUpdateTime, now.minusMinutes(40).format(formatter)));
             if (list.size() > 0) {
@@ -134,6 +130,26 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
 
         log.info("初始化结束 客户端号: {}", Constant.index);
 
+    }
+
+    private void addIndex(Index index) {
+        try {
+            Index one = indexService.findByCpuId(index.getCpuId());
+            Date now = new Date();
+            if (null == one) {
+                index.setCreateTime(now);
+                index.setUpdateTime(now);
+                indexService.save(index);
+                one = index;
+            } else {
+                one.setDelFlag(0);
+                one.setUpdateTime(now);
+                indexService.updateById(one);
+            }
+            Constant.index = Integer.parseInt(one.getId().toString());
+        } catch (Exception e) {
+            log.error("获取cpuid失败", e);
+        }
     }
 
 

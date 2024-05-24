@@ -30,8 +30,7 @@ public class InotifyLibraryUtil {
 
     public static ExecutorService fixedThreadPool;
 
-    public static ConcurrentLinkedQueue queue = new ConcurrentLinkedQueue();
-
+    public static ConcurrentHashMap<Integer, Map<Integer, String>> fdMap = new ConcurrentHashMap();
 
     public interface InotifyLibrary extends Library {
         InotifyLibrary INSTANCE = (InotifyLibrary) Native.load("c", InotifyLibrary.class);
@@ -162,16 +161,22 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
         return dirFileArray;
     }
 
-    public static void init(Set<String> dirs) throws IOException {
+    public static void init(Set<String> dirs) {
         fixedThreadPool = Executors.newFixedThreadPool(dirs.size());
         for (String dir : dirs) {
-            List<String> dirPaths = findDir(dir);
-            fixedThreadPool.execute(new Watch(dirPaths));
+            try {
+                List<String> dirPaths = findDir(dir);
+                fixedThreadPool.execute(new Watch(dirPaths));
+            } catch (Exception e) {
+                log.error("{} 添加监控目录失败",dir);
+            }
         }
+
+
     }
 
     public static List<String> findDir(String path) throws IOException {
-        Path startPath = Paths.get("起始目录路径");
+        Path startPath = Paths.get(path);
 
         List<String> dirs
                 = new ArrayList<>();
@@ -223,10 +228,28 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
         return new CopyOnWriteArrayList[]{dirs, files};
     }
 
+    public static void close() {
+        for (Map.Entry<Integer, Map<Integer, String>> fdEntry : fdMap.entrySet()) {
+            Integer fd = fdEntry.getKey();
+            Map<Integer, String> wdMap = fdEntry.getValue();
+            for (Map.Entry<Integer, String> entry : wdMap.entrySet()) {
+                try {
+                    InotifyLibrary.INSTANCE.inotify_rm_watch(fd, entry.getKey());
+                    log.info("释放inotify watch成功! 路径 {}", entry.getValue());
+                } catch (Exception e) {
+                    log.error("释放inotify watch失败!!! 路径 {}", entry.getValue(), e);
+                }
+            }
+            InotifyLibrary.INSTANCE.close(fd);
+            fdMap.remove(fd);
+            log.info("close 释放inotify fd {} 结束", fd);
+        }
+    }
+
     static class Watch implements Runnable {
 
         private int fd;
-        private Map<Integer, String> wdMap;
+        private Map<Integer, String> wdMap = new HashMap<>();
         private List<String> paths;
         private int size = 4096;
 
@@ -241,6 +264,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
             for (String path : paths) {
                 addWatchDir(path);
             }
+            fdMap.put(fd, wdMap);
 
             Pointer pointer = new Memory(size);
             try {
@@ -262,29 +286,36 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                         i += nameLen;
                         String name = byteToStr(nameBytes);
 
-                        event = eventNameMap.get(mask);
 
                         String path = wdMap.get(wd2);
 
                         String filePath = path + Constant.FILESEPARATOR + name;
-                        boolean isDir = false;
+                        boolean isDir = nameLen == 0;
                         if ((mask & IN_ISDIR) != 0) {
                             mask -= IN_ISDIR;
                             isDir = true;
 
-                            log.debug("目录: {} 事件: {} 关联码: {} 目录名: {} ", path, event, cookie, name);
-                        } else {
-                            log.debug("目录: {} 事件: {} 关联码: {} 文件名: {} ", path, event, cookie, name);
-                        }
+                            if (mask == IN_CREATE) {
+                                addWatchDir(filePath);
+                            }
 
-                        if (mask == IN_DELETE_SELF) {
-                            filePath = filePath.substring(0, filePath.length() - 2);
+                        }
+                        event = eventNameMap.get(mask);
+
+                        if (mask == IN_IGNORED) {
+                            filePath = filePath.substring(0, filePath.length() - 1);
                             isDir = true;
                             removeWatchDir(wd2);
-                        } else if (mask == IN_CREATE) {
-                            filePath = filePath.substring(0, filePath.length() - 2);
-                            addWatchDir(filePath);
                         }
+
+                        if (isDir) {
+                            log.debug("目录: {} 事件: {} 关联码: {} 目录名: {} ", path, event, cookie, name);
+
+                        } else {
+                            log.debug("目录: {} 事件: {} 关联码: {} 文件名: {} ", path, event, cookie, name);
+
+                        }
+
                         FileVo fileVo = new FileVo();
                         fileVo.setFullPath(filePath);
                         fileVo.setPath(path);
@@ -295,17 +326,8 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
 
                     }
                 }
-            } finally {
-                for (Map.Entry<Integer, String> entry : wdMap.entrySet()) {
-                    try {
-                        InotifyLibrary.INSTANCE.inotify_rm_watch(fd, entry.getKey());
-                        log.info("释放释放inotify watch成功! 路径 {}", entry.getValue());
-                    } catch (Exception e) {
-                        log.error("释放inotify watch失败!!! 路径 {}", entry.getValue(), e);
-                    }
-                }
-                InotifyLibrary.INSTANCE.close(fd);
-                log.info("释放释放inotify fd {} 结束", fd);
+            } catch (Exception e) {
+                log.error("monitor error ", e);
             }
         }
 
@@ -313,10 +335,12 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
             int wd = InotifyLibrary.INSTANCE.inotify_add_watch(fd, path,
                     IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_DELETE_SELF);
             wdMap.put(wd, path);
+            log.debug("添加监控路径: {}", path);
         }
 
         private void removeWatchDir(int wd) {
             InotifyLibrary.INSTANCE.inotify_rm_watch(fd, wd);
+            log.debug("移除监控路径: {}", wdMap.get(wd));
             wdMap.remove(wd);
         }
     }
