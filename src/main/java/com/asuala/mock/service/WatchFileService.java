@@ -21,7 +21,7 @@ import java.util.Set;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "down", name = "client", havingValue = "true")
+@ConditionalOnProperty(prefix = "watch", name = "open", havingValue = "true")
 public class WatchFileService {
 
     private final FileInfoService fileInfoService;
