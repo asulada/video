@@ -168,7 +168,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                 List<String> dirPaths = findDir(dir);
                 fixedThreadPool.execute(new Watch(dirPaths));
             } catch (Exception e) {
-                log.error("{} 添加监控目录失败",dir);
+                log.error("{} 添加监控目录失败", dir, e);
             }
         }
 
@@ -176,6 +176,9 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
     }
 
     public static List<String> findDir(String path) throws IOException {
+        if ("/".equals(path)) {
+            return null;
+        }
         Path startPath = Paths.get(path);
 
         List<String> dirs
@@ -259,6 +262,10 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
 
         @Override
         public void run() {
+            if (null == paths) {
+                log.warn("监控目录为空");
+                return;
+            }
             fd = InotifyLibrary.INSTANCE.inotify_init();
 
             for (String path : paths) {

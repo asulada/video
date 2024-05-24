@@ -34,7 +34,7 @@ public class FileListener {
 
     public static ExecutorService fixedThreadPool;
     //.swp .swx
-    private static final List<String> exlude=new ArrayList<String>(){{
+    private static final List<String> exlude = new ArrayList<String>() {{
         add(".swp");
         add(".swx");
     }};
@@ -51,17 +51,22 @@ public class FileListener {
                         Thread.sleep(1000L);
                     } else {
                         int mask = poll.getCode();
-                        boolean isDir = false;
-                        if ((mask & IN_ISDIR) != 0) {
-                            mask -= IN_ISDIR;
-                            isDir = true;
-                        }else {
-                            for (String suffix : exlude) {
-                                if (poll.getName().endsWith(suffix)){
+                        boolean isDir = poll.isDir();
+
+                        if (!isDir) {
+                            if (poll.getName().endsWith("~")) {
+                                continue;
+                            }
+                            if (poll.getName().contains(".")) {
+                                String suffix = poll.getName().substring(poll.getName().lastIndexOf("."), poll.getName().length());
+                                if (exlude.contains(suffix)) {
                                     continue;
                                 }
+                            } else if ("4913".equals(poll.getName())) {
+                                continue;
                             }
                         }
+
                         FileInfo fileInfo;
                         switch (mask) {
                             case Constant.IN_CREATE:
