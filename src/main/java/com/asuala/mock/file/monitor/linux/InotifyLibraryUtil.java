@@ -189,6 +189,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
         return dirs;
     }
 
+    private static boolean report = true;
 
     public static CopyOnWriteArrayList<FileInfo>[] findDirFile(String path) throws IOException {
         // 指定要遍历的文件夹路径
@@ -197,6 +198,18 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
         CopyOnWriteArrayList<FileInfo> dirs = new CopyOnWriteArrayList();
         CopyOnWriteArrayList<FileInfo> files = new CopyOnWriteArrayList();
 
+        Thread thread = new Thread(() -> {
+            while (report) {
+                log.info("{} 已统计文件数量 {}", path, dirs.size() + files.size());
+                try {
+                    Thread.sleep(2000L);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            log.info("{} 已统计文件数量 {}", path, dirs.size() + files.size());
+        });
+        thread.start();
         // 使用 Files.walk() 方法遍历文件夹
         Files.walkFileTree(folderPath, new SimpleFileVisitor<Path>() {
 
@@ -228,6 +241,12 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                 return FileVisitResult.CONTINUE;
             }
         });
+        report = false;
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            log.error("{} 等待统计线程结束失败", path);
+        }
         return new CopyOnWriteArrayList[]{dirs, files};
     }
 
