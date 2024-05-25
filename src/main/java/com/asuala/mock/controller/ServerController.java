@@ -22,12 +22,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
@@ -44,11 +43,11 @@ import java.util.*;
 @Slf4j
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "down", name = "server", havingValue = "true")
+@RequestMapping("video")
 public class ServerController {
 
     private final RecordService recordService;
     private final ServerService serverService;
-    private final FileInfoService fileInfoService;
 
     @Autowired(required = false)
     private Es8Client es8Client;
@@ -60,9 +59,7 @@ public class ServerController {
     @Value("${down.http.salt}")
     private String salt;
 
-    private static final List<String> fields = new ArrayList<String>() {{
-        add("name");
-    }};
+
 
     @PostConstruct
     public void init() {
@@ -133,139 +130,8 @@ public class ServerController {
         return res;
     }
 
-    @PostMapping("down")
-    public JSONObject down(@RequestBody UrlReq req) {
-        JSONObject res = new JSONObject();
-        res.put("code", 222);
-        if (StringUtils.isBlank(req.getUrl())) {
-            res.put("msg", "地址为空");
-            return res;
-        }
-        if (StringUtils.isBlank(req.getFileName())) {
-            res.put("msg", "名称为空");
-            return res;
-        }
-        req.setFileName(req.getFileName().trim());
-        if (StringUtils.isBlank(req.getQuality())) {
-            res.put("msg", "分辨率为空");
-            return res;
-        }
-        if (StringUtils.isBlank(req.getPageUrl())) {
-            res.put("msg", "页面地址为空");
-            return res;
-        }
-        if (StringUtils.isBlank(req.getAuthor())) {
-            res.put("msg", "作者为空");
-            return res;
-        }
-        if (StringUtils.isBlank(req.getPicUrl())) {
-            res.put("msg", "图片为空");
-            return res;
-        }
-//        File file = new File(downDir + req.getAuthor() + Constant.FILESEPARATOR +"+ req.getFileName() + ".mp4");
-//        if (file.exists()) {
-//            res.put("msg", "文件已存在");
-//            return res;
-//        }
-        if (recordService.count(new LambdaQueryWrapper<Record>().eq(Record::getState, RecordEnum.UNTREATED.getCode()).eq(Record::getName, req.getFileName()).eq(Record::getQuality, req.getQuality()).eq(Record::getAuthor, req.getAuthor())) > 0) {
-            res.put("msg", "文件已存在下载列表");
-            return res;
-        }
-        if (null == req.getIndex()) {
-            log.debug("没有指定分片客户端 默认: {} 文件名: {}", Constant.index, req.getFileName());
-            req.setIndex(Constant.index);
-        }
-//        Record result = recordService.getLastSameFile(req);
-//        if (null != result) {
-//            result.setUrl(req.getUrl());
-//            result.setUpdateTime(new Date());
-//            result.setDelFlag(0);
-//            result.setPageUrl(req.getPageUrl());
-//            result.setIndex(req.getIndex());
-//            result.setPicUrl(req.getPicUrl());
-//            recordService.updateByPrimaryKeySelective(result);
-//        } else {
-        //        down(req.getFileName(),req.getUrl());
-        Record result = new Record();
-        result.setName(req.getFileName());
-        result.setUrl(req.getUrl());
-        result.setCreateTime(new Date());
-        result.setQuality(req.getQuality());
-        result.setState(RecordEnum.UNTREATED.getCode());
-        result.setAuthor(req.getAuthor());
-        result.setPageUrl(req.getPageUrl());
-        result.setIndex(req.getIndex());
-        result.setPicUrl(req.getPicUrl());
-        result.setTimeHum(TimeUtils.convertSecondsToHMS(req.getDuration()));
-        recordService.save(result);
-//        }
 
-        res.put("code", 200);
-        return res;
-    }
 
-    @PostMapping("downFbd")
-    public JSONObject downFbd(@RequestBody UrlReq req) throws IOException {
-        JSONObject res = new JSONObject();
-        res.put("code", 222);
-        if (StringUtils.isBlank(req.getFileName())) {
-            res.put("msg", "名称为空");
-            return res;
-        }
-        req.setFileName(req.getFileName().trim());
-        if (StringUtils.isBlank(req.getAuthor())) {
-            res.put("msg", "作者为空");
-            return res;
-        }
-        if (recordService.count(new LambdaQueryWrapper<Record>().in(Record::getState, RecordEnum.TXT.getCode(), RecordEnum.TXT_DOWNLOADED.getCode()).eq(Record::getName, req.getFileName()).eq(Record::getAuthor, req.getAuthor())) > 0) {
-            res.put("msg", "文件已存在下载列表");
-            return res;
-        }
-        if (null == req.getIndex()) {
-            log.debug("没有指定分片客户端 默认: {} 文件名: {}", Constant.index, req.getFileName());
-            req.setIndex(Constant.index);
-        }
-
-        Record result = new Record();
-        result.setName(req.getFileName());
-        result.setCreateTime(new Date());
-        result.setState(RecordEnum.TXT.getCode());
-        result.setAuthor(req.getAuthor());
-        result.setQuality("txt");
-        result.setIndex(req.getIndex());
-        recordService.save(result);
-
-        res.put("code", 200);
-        return res;
-    }
-
-    @PostMapping("search")
-    public JSONObject search(@RequestBody SearchReq req) throws IOException {
-        JSONObject res = new JSONObject();
-        res.put("code", 222);
-
-        if (StringUtils.isBlank(req.getKey())) {
-            res.put("msg", "关键字为空");
-            return res;
-        }
-        Page<FileInfo> page = new Page<>(req.getPageNum(), req.getPageSize());
-        List<FileInfo> list = fileInfoService.list(page, new LambdaQueryWrapper<FileInfo>().likeRight(FileInfo::getName, req.getKey()).orderByDesc(FileInfo::getChangeTime));
-        if (list.size() > 0) {
-            Map<String, Object> result = new HashMap<>();
-            result.put("list", list);
-            result.put("total", page.getTotal());
-            res.put("data", result);
-            res.put("code", 200);
-            return res;
-        }
-//        Query query = Query.of(q -> q.wildcard(w -> w.field("name").value(key)));
-        Query query = Query.of(q -> q.matchPhrase(m -> m.query(req.getKey()).field("name").slop(6)));
-//        Query query = Query.of(q -> q.match(m -> m.query(key).field("name")));
-        Map<String, Object> map = es8Client.complexQueryHighlight(query, FileInfoEs.class, fields, req.getPageNum(), req.getPageSize());
-        res.put("data", map);
-        res.put("code", 200);
-        return res;
-    }
 
     @PostMapping("saveEs")
     public JSONObject saveEs(@RequestBody FileInfoReq req) {
@@ -354,5 +220,6 @@ public class ServerController {
         }
         return file.getAbsolutePath();
     }
+
 
 }

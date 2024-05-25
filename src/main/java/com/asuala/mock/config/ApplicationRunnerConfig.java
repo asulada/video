@@ -47,7 +47,8 @@ public class ApplicationRunnerConfig implements ApplicationRunner {
 
     private final FileInfoMapper fileInfoMapper;
     private final FileInfoService fileInfoService;
-    private final WatchFileService clientService;
+    @Autowired(required = false)
+    private WatchFileService clientService;
     @Autowired(required = false)
     private CommonTask commonTask;
 
