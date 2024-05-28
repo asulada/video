@@ -1,0 +1,21 @@
+package com.asuala.mock.mapper;
+
+import com.asuala.mock.vo.User;
+import java.util.List;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
+
+public interface UserMapper extends BaseMapper<User> {
+    int deleteByPrimaryKey(Long id);
+
+    int insertSelective(User record);
+
+    User selectByPrimaryKey(Long id);
+
+    int updateByPrimaryKeySelective(User record);
+
+    int updateByPrimaryKey(User record);
+
+    int batchInsert(@Param("list") List<User> list);
+}

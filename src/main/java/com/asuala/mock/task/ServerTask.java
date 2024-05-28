@@ -22,7 +22,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "down", name = "server", havingValue = "true")
+@ConditionalOnProperty(prefix = "file", name = "server.open", havingValue = "true")
 public class ServerTask {
 
     private final RecordPageService recordPageService;

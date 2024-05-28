@@ -1,5 +1,7 @@
 package com.asuala.mock;
 
+import cn.hutool.core.util.IdUtil;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 

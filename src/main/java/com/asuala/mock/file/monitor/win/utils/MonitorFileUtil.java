@@ -35,7 +35,7 @@ public class MonitorFileUtil {
     private static final int outputBufferSize = 1024 * 16;
     public static FileInfoService fileInfoServicel;
 
-    public static List<FileInfo> getFileInfo(TreeMap<Long, FileTreeNode> map, String volumeNo) {
+    public static List<FileInfo> getFileInfo(TreeMap<Long, FileTreeNode> map, Map.Entry<String, Long> entryVolume) {
         long startMillis = System.currentTimeMillis();
 
         Date date = new Date();
@@ -46,7 +46,7 @@ public class MonitorFileUtil {
             stringBuilder.append(Constant.FILESEPARATOR).append(entry.getValue().getFileName());
             findPath(map, entry.getValue(), stringBuilder);
 
-            stringBuilder.insert(0, volumeNo);
+            stringBuilder.insert(0, entryVolume.getKey());
             paths.add(stringBuilder.toString());
         }
         List<List<String>> split = CollectionUtil.split(paths, 5000);
@@ -56,7 +56,7 @@ public class MonitorFileUtil {
 
                 for (String filePath : strings) {
                     File file = new File(filePath);
-                    FileInfo.FileInfoBuilder builder = FileInfo.builder().index(Constant.index).name(file.getName()).path(filePath).createTime(date).changeTime(new Date(file.lastModified()));
+                    FileInfo.FileInfoBuilder builder = FileInfo.builder().index(Constant.index).name(file.getName()).path(filePath).createTime(date).changeTime(new Date(file.lastModified())).uId(entryVolume.getValue());
                     if (file.isFile()) {
                         String suffix = FileUtil.getSuffix(file);
                         if (suffix.length() > 20) {
@@ -77,10 +77,10 @@ public class MonitorFileUtil {
         try {
             while (!executor.awaitTermination(1, TimeUnit.SECONDS)) ;
         } catch (InterruptedException e) {
-            log.error("{} 线程池失效", volumeNo, e);
+            log.error("{} 线程池失效", entryVolume.getKey(), e);
         }
         long endMillis = System.currentTimeMillis();
-        log.info("{} 同步数据库耗时: {}s", volumeNo, (endMillis - startMillis) / 1000);
+        log.info("{} 同步数据库耗时: {}s", entryVolume.getKey(), (endMillis - startMillis) / 1000);
         return null;
     }
 

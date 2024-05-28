@@ -42,7 +42,7 @@ import java.util.*;
 @RestController
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "down", name = "server", havingValue = "true")
+@ConditionalOnProperty(prefix = "file", name = "server.open", havingValue = "true")
 @RequestMapping("video")
 public class ServerController {
 
@@ -56,9 +56,8 @@ public class ServerController {
     //  directory: ""
     @Value("${down.directory:'d:\\app\\'}")
     private String downDir;
-    @Value("${down.http.salt}")
+    @Value("${file.server.http.salt}")
     private String salt;
-
 
 
     @PostConstruct
@@ -66,6 +65,7 @@ public class ServerController {
         //TODO 2022-09-18: ElasticSearch 创建索引
         try {
             es8Client.createIndexSettingsMappings(FileInfoEs.class);
+            log.info("es创建索引结束");
         } catch (Exception e) {
             log.error("连接es创建索引失败", e);
         }
@@ -131,8 +131,6 @@ public class ServerController {
     }
 
 
-
-
     @PostMapping("saveEs")
     public JSONObject saveEs(@RequestBody FileInfoReq req) {
         JSONObject res = new JSONObject();
@@ -155,6 +153,9 @@ public class ServerController {
         if (null == req.getId()) {
             return res;
         }
+        if (null == req.getUId()) {
+            return res;
+        }
         FileInfoEs fileInfoEs = convertEs(req);
 
         es8Client.addData(fileInfoEs, false);
@@ -171,6 +172,7 @@ public class ServerController {
         fileInfoEs.setSize(req.getSize());
         fileInfoEs.setChangeTime(req.getChangeTime());
         fileInfoEs.setIndex(req.getIndex());
+        fileInfoEs.setSId(req.getUId());
         return fileInfoEs;
     }
 

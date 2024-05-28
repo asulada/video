@@ -19,4 +19,5 @@ public class FileInfoReq {
     private Date changeTime;
     private Integer index;
     private String sign;
+    private Long uId;
 }

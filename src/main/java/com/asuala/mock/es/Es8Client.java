@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
  * @description:
  * @create: 2022/09/18
  **/
-@ConditionalOnProperty(prefix = "down", name = "server", havingValue = "true")
+@ConditionalOnProperty(prefix = "file", name = "server.open", havingValue = "true")
 @Component
 @Slf4j
 public class Es8Client {
@@ -122,6 +122,7 @@ public class Es8Client {
         List<String> indexs = indexs();
         List<String> aliases = aliases();
         if (indexs.contains(index) || aliases.contains(alias)) {
+            log.info("索引已存在 {}", tClass);
             return false;
         }
         int shards = annotation.shards();

@@ -73,7 +73,6 @@ logging:
   config: config/log4j2.xml
 
 down:
-  server: true
   client: false
   txtRole: false
   downCron: "0 0/1 * * * ?"
@@ -82,11 +81,6 @@ down:
     video:
       list: ${env.down.html.video.list}
       duration: ${env.down.html.video.duration}
-  http:
-    salt: ${env.down.http.salt}
-    addUrl: ${env.down.http.url}/saveEs
-    delUrl: ${env.down.http.url}/delEs
-    rebuildUrl: ${env.down.http.url}/rebuildData
   proxy:
     ip: 127.0.0.1
     port: 7890
@@ -100,14 +94,21 @@ down:
   search:
     pageSize: 60
 
+file:
+  server:
+    open: true
+    http:
+      salt: ${env.down.http.salt}
+      addUrl: ${env.down.http.url}/saveEs
+      delUrl: ${env.down.http.url}/delEs
+      rebuildUrl: ${env.down.http.url}/rebuildData
 
 search:
   urlOptions: ${env.search.urlOptions}
   passwd: ${env.search.passwd}
 
 watch:
-  open: false
-  dir: "/"
+  open: true
   rebuldFlag: false
   deleteLimit: 2000000
 

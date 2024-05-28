@@ -7,7 +7,7 @@ import lombok.Data;
  * @create: 2024/05/25
  **/
 @Data
-public class User {
+public class UserReq {
     private String name;
     private String password;
 }

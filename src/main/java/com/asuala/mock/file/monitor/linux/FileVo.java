@@ -13,4 +13,5 @@ public class FileVo {
     private String name;
     private int code;
     private boolean isDir;
+    private Long sId;
 }

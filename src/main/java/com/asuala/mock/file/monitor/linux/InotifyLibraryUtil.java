@@ -4,7 +4,9 @@ import cn.hutool.core.io.FileUtil;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.service.FileInfoService;
 import com.asuala.mock.utils.CacheUtils;
+import com.asuala.mock.utils.FileIdUtils;
 import com.asuala.mock.vo.FileInfo;
+import com.asuala.mock.vo.UPath;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
@@ -152,27 +154,26 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
         }
     }
 
-    public static CopyOnWriteArrayList<FileInfo>[][] rebuild(Set<String> dirs) throws IOException {
-        CopyOnWriteArrayList<FileInfo>[][] dirFileArray = new CopyOnWriteArrayList[dirs.size()][2];
+    public static CopyOnWriteArrayList<FileInfo>[][] rebuild(Map<String, Long> fileMap) throws IOException {
+        CopyOnWriteArrayList<FileInfo>[][] dirFileArray = new CopyOnWriteArrayList[fileMap.size()][2];
         int i = 0;
-        for (String dir : dirs) {
-            dirFileArray[i++] = findDirFile(dir);
+        for (Map.Entry<String, Long> entry : fileMap.entrySet()) {
+            dirFileArray[i++] = findDirFile(entry.getKey(), entry.getValue());
+
         }
         return dirFileArray;
     }
 
-    public static void init(Set<String> dirs) {
-        fixedThreadPool = Executors.newFixedThreadPool(dirs.size());
-        for (String dir : dirs) {
+    public static void init(Map<String, Long> fileMap) {
+        fixedThreadPool = Executors.newFixedThreadPool(fileMap.size());
+        for (Map.Entry<String, Long> entry : fileMap.entrySet()) {
             try {
-                List<String> dirPaths = findDir(dir);
-                fixedThreadPool.execute(new Watch(dirPaths));
+                List<String> dirPaths = findDir(entry.getKey());
+                fixedThreadPool.execute(new Watch(dirPaths, entry.getValue()));
             } catch (Exception e) {
-                log.error("{} 添加监控目录失败", dir, e);
+                log.error("{} 添加监控目录失败", entry.getKey(), e);
             }
         }
-
-
     }
 
     public static List<String> findDir(String path) throws IOException {
@@ -191,7 +192,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
 
     private static boolean report = true;
 
-    public static CopyOnWriteArrayList<FileInfo>[] findDirFile(String path) throws IOException {
+    public static CopyOnWriteArrayList<FileInfo>[] findDirFile(String path, Long uId) throws IOException {
         // 指定要遍历的文件夹路径
         Path folderPath = Paths.get(path);
 
@@ -207,7 +208,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                     e.printStackTrace();
                 }
             }
-            log.info("{} 已统计文件数量 {}", path, dirs.size() + files.size());
+            log.info("{} 遍历结束 已统计文件数量 {}", path, dirs.size() + files.size());
         });
         thread.start();
         // 使用 Files.walk() 方法遍历文件夹
@@ -217,7 +218,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                 // 获取文件夹信息
 
                 FileInfo fileInfo = FileInfo.builder().index(Constant.index).name(dir.getFileName().toString()).path(dir.toString()).createTime(new Date())
-                        .changeTime(new Date(Files.getLastModifiedTime(dir).toMillis())).dir(1).build();
+                        .changeTime(new Date(Files.getLastModifiedTime(dir).toMillis())).dir(1).uId(uId).build();
                 dirs.add(fileInfo);
                 return FileVisitResult.CONTINUE;
             }
@@ -235,7 +236,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                 String suffix = FileUtil.getSuffix(fileName);
 
                 FileInfo fileInfo = FileInfo.builder().index(Constant.index).name(fileName).path(file.toString()).createTime(new Date())
-                        .changeTime(modifyTime).dir(0).size(fileSize).suffix(suffix).build();
+                        .changeTime(modifyTime).dir(0).size(fileSize).suffix(suffix).uId(uId).build();
                 files.add(fileInfo);
 
                 return FileVisitResult.CONTINUE;
@@ -263,7 +264,6 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                 }
             }
             InotifyLibrary.INSTANCE.close(fd);
-            fdMap.remove(fd);
             log.info("close 释放inotify fd {} 结束", fd);
         }
     }
@@ -273,10 +273,12 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
         private int fd;
         private Map<Integer, String> wdMap = new HashMap<>();
         private List<String> paths;
-        private int size = 4096;
+        private static final int size = 4096;
+        private static Long sId;
 
-        public Watch(List<String> paths) {
+        public Watch(List<String> paths, Long sId) {
             this.paths = paths;
+            this.sId = sId;
         }
 
         @Override
@@ -348,6 +350,8 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                         fileVo.setName(name);
                         fileVo.setCode(mask);
                         fileVo.setDir(isDir);
+                        fileVo.setDir(isDir);
+                        fileVo.setSId(sId);
                         CacheUtils.queue.offer(fileVo);
 
                     }

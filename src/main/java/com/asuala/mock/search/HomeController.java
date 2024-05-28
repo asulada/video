@@ -5,23 +5,29 @@ import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.util.SaResult;
 import cn.hutool.core.util.IdUtil;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermsQueryField;
 import com.alibaba.fastjson2.JSONObject;
+import com.asuala.mock.config.MainConstant;
 import com.asuala.mock.enums.state.RecordEnum;
 import com.asuala.mock.es.Es8Client;
 import com.asuala.mock.es.entity.FileInfoEs;
 import com.asuala.mock.m3u8.utils.Constant;
+import com.asuala.mock.mapper.UserMapper;
 import com.asuala.mock.service.FileInfoService;
 import com.asuala.mock.service.RecordService;
 import com.asuala.mock.utils.TimeUtils;
 import com.asuala.mock.vo.FileInfo;
 import com.asuala.mock.vo.Record;
+import com.asuala.mock.vo.User;
 import com.asuala.mock.vo.req.SearchReq;
 import com.asuala.mock.vo.req.UrlReq;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +37,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @description:
@@ -39,10 +46,11 @@ import java.util.*;
 @Controller
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "down", name = "server", havingValue = "true")
+@ConditionalOnProperty(prefix = "file", name = "server.open", havingValue = "true")
 public class HomeController {
     private final RecordService recordService;
     private final FileInfoService fileInfoService;
+    private final UserMapper userMapper;
     @Autowired(required = false)
     private Es8Client es8Client;
 
@@ -54,6 +62,7 @@ public class HomeController {
     private static final List<String> fields = new ArrayList<String>() {{
         add("name");
     }};
+
     @RequestMapping("/")
     public String index() {
         return "index.html";
@@ -61,13 +70,14 @@ public class HomeController {
 
     @RequestMapping("login")
     @ResponseBody
-    public SaResult doLogin(@RequestBody User user) {
+    public SaResult doLogin(@RequestBody UserReq user) {
+        User userVo = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getName, user.getName()));
         // 此处仅作模拟示例，真实项目需要从数据库中查询数据进行比对
-        if (!BCrypt.checkpw(user.getPassword(), passwd)) {
+        if (!BCrypt.checkpw(user.getPassword(), userVo.getPasswd())) {
             return SaResult.error("账号或密码错误");
         }
         log.info("{} 登录", user.getName());
-        StpUtil.login(IdUtil.fastUUID());
+        StpUtil.login(userVo.getId());
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
         return SaResult.data(tokenInfo);
     }
@@ -84,7 +94,6 @@ public class HomeController {
 
     @PostMapping("search")
     @ResponseBody
-
     public JSONObject search(@RequestBody SearchReq req) throws IOException {
         JSONObject res = new JSONObject();
         res.put("code", 222);
@@ -93,8 +102,13 @@ public class HomeController {
             res.put("msg", "关键字为空");
             return res;
         }
+        Set<Long> fileIds = MainConstant.userResource.get(StpUtil.getLoginIdAsLong());
+        if (CollectionUtils.isEmpty(fileIds)) {
+            res.put("msg", "没有权限");
+            return res;
+        }
         Page<FileInfo> page = new Page<>(req.getPageNum(), req.getPageSize());
-        List<FileInfo> list = fileInfoService.list(page, new LambdaQueryWrapper<FileInfo>().likeRight(FileInfo::getName, req.getKey()).orderByDesc(FileInfo::getChangeTime));
+        List<FileInfo> list = fileInfoService.list(page, new LambdaQueryWrapper<FileInfo>().in(FileInfo::getUId, fileIds).likeRight(FileInfo::getName, req.getKey()).orderByDesc(FileInfo::getChangeTime));
         if (list.size() > 0) {
             Map<String, Object> result = new HashMap<>();
             result.put("list", list);
@@ -104,7 +118,13 @@ public class HomeController {
             return res;
         }
 //        Query query = Query.of(q -> q.wildcard(w -> w.field("name").value(key)));
-        Query query = Query.of(q -> q.matchPhrase(m -> m.query(req.getKey()).field("name").slop(6)));
+//        Query query = Query.of(q -> q.matchPhrase(m -> m.query(req.getKey()).field("name").slop(6)));
+        Query query = Query.of(q -> q.bool(b -> b.must(mustQuery -> mustQuery.terms(t -> t
+                .field("sId")
+                .terms(TermsQueryField.of(tf -> tf
+                        .value(fileIds.stream().map(item -> FieldValue.of(item)).collect(Collectors.toList()))  // Replace with actual terms
+                )))).
+                must(mustQuery -> mustQuery.matchPhrase(m -> m.query(req.getKey()).field("name").slop(6)))));
 //        Query query = Query.of(q -> q.match(m -> m.query(key).field("name")));
         Map<String, Object> map = es8Client.complexQueryHighlight(query, FileInfoEs.class, fields, req.getPageNum(), req.getPageSize());
         res.put("data", map);
@@ -218,6 +238,7 @@ public class HomeController {
         res.put("code", 200);
         return res;
     }
+
     @GetMapping("openUrl")
     @ResponseBody
 

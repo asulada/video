@@ -24,11 +24,11 @@ import java.util.concurrent.locks.ReentrantLock;
 @Service
 public class FileInfoService extends ServiceImpl<FileInfoMapper, FileInfo> {
 
-    @Value("${down.http.addUrl}")
+    @Value("${file.server.http.addUrl}")
     private String addUrl;
-    @Value("${down.http.delUrl}")
+    @Value("${file.server.http.delUrl}")
     private String delUrl;
-    @Value("${down.http.salt}")
+    @Value("${file.server.http.salt}")
     private String salt;
 
     private static final Lock lock = new ReentrantLock();
@@ -55,16 +55,6 @@ public class FileInfoService extends ServiceImpl<FileInfoMapper, FileInfo> {
 
     public int updateByPrimaryKey(FileInfo record) {
         return baseMapper.updateByPrimaryKey(record);
-    }
-
-
-    public int updateBatch(List<FileInfo> list) {
-        return baseMapper.updateBatch(list);
-    }
-
-
-    public int updateBatchSelective(List<FileInfo> list) {
-        return baseMapper.updateBatchSelective(list);
     }
 
 
@@ -104,8 +94,8 @@ public class FileInfoService extends ServiceImpl<FileInfoMapper, FileInfo> {
         return fileInfo;
     }
 
-    public void insert(File file) {
-        FileInfo.FileInfoBuilder builder = FileInfo.builder().name(file.getName()).path(file.getAbsolutePath()).createTime(new Date()).index(Constant.index).changeTime(new Date(file.lastModified()));
+    public void insert(File file, Long sId) {
+        FileInfo.FileInfoBuilder builder = FileInfo.builder().name(file.getName()).path(file.getAbsolutePath()).createTime(new Date()).index(Constant.index).changeTime(new Date(file.lastModified())).uId(sId);
         if (file.isFile()) {
             String suffix = FileUtil.getSuffix(file);
             if (suffix.length() > 20) {
@@ -122,7 +112,6 @@ public class FileInfoService extends ServiceImpl<FileInfoMapper, FileInfo> {
     }
 
 
-
     public void saveEs(FileInfo fileInfo) {
         FileInfoReq req = new FileInfoReq();
         req.setId(fileInfo.getId());
@@ -133,6 +122,7 @@ public class FileInfoService extends ServiceImpl<FileInfoMapper, FileInfo> {
         req.setChangeTime(fileInfo.getChangeTime());
         req.setIndex(fileInfo.getIndex());
         req.setSign(MD5Utils.getSaltMD5(fileInfo.getName(), salt));
+        req.setUId(fileInfo.getUId());
         try {
             HttpUtil.post(addUrl, JSON.toJSONString(req));
         } catch (Exception e) {

@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "down", name = "server", havingValue = "true")
+@ConditionalOnProperty(prefix = "file", name = "server.open", havingValue = "true")
 public class ServerService {
 
     private final FileInfoMapper fileInfoMapper;
@@ -50,7 +50,7 @@ public class ServerService {
                 break;
             }
             List<FileInfoEs> listEs = fileInfos.stream().map(item -> FileInfoEs.builder().id(item.getId()).changeTime(item.getChangeTime()).index(item.getIndex()).
-                    path(item.getPath()).size(item.getSize()).name(item.getName()).suffix(item.getSuffix()).build()).collect(Collectors.toList());
+                    path(item.getPath()).size(item.getSize()).name(item.getName()).suffix(item.getSuffix()).sId(item.getUId()).build()).collect(Collectors.toList());
             es8Client.addDatas(listEs, false);
         }
     }
@@ -58,10 +58,9 @@ public class ServerService {
     @Timer("处理数据库重复文件")
     private void delRepearFileInfo(int index) {
         List<Map<String, String>> maps = fileInfoMapper.findNameByIndex(index);
-        List<Long> delIds = new ArrayList<>();
         List<List<Map<String, String>>> split = CollectionUtil.split(maps, 20000);
         ThreadPoolExecutor executor = ThreadPoolExecutorUtils.getThreadPoolExecutorInstance();
-        CopyOnWriteArrayList<Long> copy = new CopyOnWriteArrayList();
+        CopyOnWriteArrayList<Long> delIds = new CopyOnWriteArrayList();
         for (List<Map<String, String>> mapList : split) {
             executor.execute(() -> {
                 for (Map<String, String> map : mapList) {
@@ -72,7 +71,7 @@ public class ServerService {
                     for (int i = 0; i < paths.length; i++) {
                         String value = paths[i];
                         if (pathSet.contains(value)) {
-                            copy.add(Long.parseLong(ids[i]));
+                            delIds.add(Long.parseLong(ids[i]));
                         } else {
                             pathSet.add(value);
                         }
@@ -87,6 +86,7 @@ public class ServerService {
             log.error("线程池失效", e);
         }
         if (delIds.size() > 0) {
+            log.info("删除重复文件数: {}", delIds.size());
             fileInfoMapper.deleteBatchIds(delIds);
         }
     }

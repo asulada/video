@@ -6,7 +6,6 @@ import com.asuala.mock.vo.FileInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -16,8 +15,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import static com.asuala.mock.file.monitor.linux.Constant.IN_ISDIR;
 
 
 /**
@@ -71,14 +68,14 @@ public class FileListener {
                         switch (mask) {
                             case Constant.IN_CREATE:
                             case Constant.IN_MOVED_TO:
-                                fileInfoService.insert(new File(poll.getFullPath()));
+                                fileInfoService.insert(new File(poll.getFullPath()), poll.getSId());
                                 break;
                             case Constant.IN_MODIFY:
                                 if (!isDir) {
                                     fileInfo = fileInfoService.findFileInfo(poll.getName(), poll.getPath());
                                     if (null == fileInfo) {
                                         log.warn("{} 修改文件事件-没有文件", poll.getFullPath());
-                                        fileInfoService.insert(new File(poll.getFullPath()));
+                                        fileInfoService.insert(new File(poll.getFullPath()), poll.getSId());
                                     } else {
                                         File file = new File(poll.getFullPath());
                                         fileInfo.setSize(file.length());
