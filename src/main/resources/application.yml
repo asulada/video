@@ -109,7 +109,7 @@ search:
 
 watch:
   open: true
-  rebuldFlag: false
+  rebuldFlag: true
   deleteLimit: 2000000
 
 transcode:

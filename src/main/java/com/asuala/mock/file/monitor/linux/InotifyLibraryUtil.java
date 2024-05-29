@@ -170,6 +170,8 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
             try {
                 List<String> dirPaths = findDir(entry.getKey());
                 fixedThreadPool.execute(new Watch(dirPaths, entry.getValue()));
+                log.info("{} 监控目录数量 {}", entry.getKey(), dirPaths.size());
+
             } catch (Exception e) {
                 log.error("{} 添加监控目录失败", entry.getKey(), e);
             }
@@ -349,7 +351,6 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
                         fileVo.setPath(path);
                         fileVo.setName(name);
                         fileVo.setCode(mask);
-                        fileVo.setDir(isDir);
                         fileVo.setDir(isDir);
                         fileVo.setSId(sId);
                         CacheUtils.queue.offer(fileVo);

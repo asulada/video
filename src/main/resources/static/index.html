@@ -27,7 +27,7 @@
 </head>
 <body style="display: flex;
     justify-content: center;">
-<div id="app" style="width: 50%;margin-top: 14px;">
+<div id="app" style="width: 70%;margin-top: 14px;">
     <template>
         <el-container>
             <el-header style="height: unset">
@@ -49,6 +49,9 @@
                             <el-radio label="1">加密内网</el-radio>
                             <el-radio label="2">内网</el-radio>
                         </el-radio-group>
+
+                        <el-button style="margin-left: 20px" type="danger" @click="clearAllCookies" >退出</el-button>
+
                     </el-form-item>
                 </el-form>
             </el-header>
@@ -147,7 +150,7 @@
                 loginData: Object.assign({}, defualtLogin),
                 tableData: [],
                 total: null,
-                config_url: "http://localhost:7082/",
+                config_url: "",
                 skipUrl: "",
                 dialogVisible: false,
             }
@@ -193,6 +196,16 @@
                 window.scrollTo(0, 0);
                 this.listQuery.pageNum = val;
                 this.getList();
+            },
+            clearAllCookies() {
+                const cookies = document.cookie.split(';');
+
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i];
+                    const eqPos = cookie.indexOf('=');
+                    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                }
             },
             handleSizeChange(val) {
                 window.scrollTo(0, 0);
