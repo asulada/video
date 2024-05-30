@@ -1,10 +1,13 @@
 package com.asuala.mock;
 
 import cn.hutool.http.HttpGlobalConfig;
+import com.asuala.mock.config.SpringContextUtil;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -16,12 +19,15 @@ import java.io.IOException;
 @EnableScheduling
 @MapperScan("com.asuala.mock.mapper") //扫描mapper的包，或者读者可以在对应的mapper上加上@Mapper的注解
 @EnableAsync
+@EnableAspectJAutoProxy
 public class MockApplication {
 
 
     public static void main(String[] args) throws IOException {
         HttpGlobalConfig.setTimeout(10000);
-        SpringApplication.run(MockApplication.class, args);
+        ConfigurableApplicationContext context = SpringApplication.run(MockApplication.class, args);
+//        SpringContextUtil.setApplicationContext(context);
+
         // 自定义关闭钩子逻辑
 //        Runtime.getRuntime().addShutdownHook(new Thread(()->{
 //            System.out.println("Ctrl+C 被触发，执行关闭逻辑...");

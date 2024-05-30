@@ -206,13 +206,7 @@ public class ServerController {
         if (!MD5Utils.getSaltverifyMD5(req.getIndex().toString(), salt, req.getSign())) {
             return;
         }
-        new Thread(() -> {
-            try {
-                serverService.rebuildData(req);
-            } catch (IOException e) {
-                log.error("重构文件数据失败 index: {}", req.getIndex(), e);
-            }
-        }).start();
+        serverService.rebuildData(req);
     }
 
     private String getFilName(String fileName) {

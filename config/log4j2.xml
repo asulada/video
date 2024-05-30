@@ -12,6 +12,15 @@
                 error：错误，输出错误信息
                 fatal：严重错误
         -->
+
+        <!-- 忽略Elasticsearch客户端包的DEBUG日志 -->
+        <Logger name="org.elasticsearch.client" level="WARN" additivity="false">
+            <AppenderRef ref="debugFile"/>
+        </Logger>
+        <Logger name="org.apache.http" level="WARN" additivity="false">
+            <AppenderRef ref="debugFile"/>
+        </Logger>
+
         <root level="debug">
             <appender-ref ref="spring6log" />
 <!--            <appender-ref ref="infoFile" level="info" />-->
@@ -60,7 +69,7 @@
 
         <RollingFile name="debugFile" fileName="logs/debug.log"
                      filePattern="logs/$${date:yyyy-MM}/debug-%d{yyyy-MM-dd HH-mm-ss}-%i.log.gz">
-            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss SSS} [%t] %-5level %msg%xEx%n"/>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss SSS} [%t] %-3level %logger{50} - %msg%n"/>
             <SizeBasedTriggeringPolicy size="20MB"/>
             <!-- DefaultRolloverStrategy 属性如不设置，
             则默认为最多同一文件夹下7个文件，这里设置了20 -->

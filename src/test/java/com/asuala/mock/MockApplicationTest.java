@@ -1,8 +1,10 @@
 package com.asuala.mock;
 
 import com.asuala.mock.mapper.RecordMapper;
+import com.asuala.mock.service.ServerService;
 import com.asuala.mock.transcode.TranscodeService;
 import com.asuala.mock.vo.Record;
+import com.asuala.mock.vo.req.RebuildReq;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
@@ -41,6 +43,9 @@ public class MockApplicationTest {
     @Autowired
     private TranscodeService transcodeService;
 
+    @Autowired
+    private ServerService serverService;
+
     @Test
     public void init() {
         List<Record> recordList = recordMapper.selectList(new LambdaQueryWrapper<Record>().gt(Record::getId, 6346).eq(Record::getState, 0));
@@ -71,4 +76,14 @@ public class MockApplicationTest {
     public void test02() throws IOException {
         transcodeService.ranscodeVideo(new File("D:\\"));
     }
+
+    @Test
+    public void test03() throws IOException {
+        RebuildReq rebuildReq = new RebuildReq();
+        rebuildReq.setIndex(1);
+//        serverService.rebuildData(rebuildReq);
+//        serverService.delRepearFileInfo(1);
+    }
+
+
 }
