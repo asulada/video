@@ -2,11 +2,8 @@ package com.asuala.mock.file.monitor.linux;
 
 import cn.hutool.core.io.FileUtil;
 import com.asuala.mock.m3u8.utils.Constant;
-import com.asuala.mock.service.FileInfoService;
 import com.asuala.mock.utils.CacheUtils;
-import com.asuala.mock.utils.FileIdUtils;
 import com.asuala.mock.vo.FileInfo;
-import com.asuala.mock.vo.UPath;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
@@ -32,7 +29,7 @@ public class InotifyLibraryUtil {
 
     public static ExecutorService fixedThreadPool;
 
-    public static ConcurrentHashMap<Integer, Map<Integer, String>> fdMap = new ConcurrentHashMap();
+    public static ConcurrentHashMap<Integer, ConcurrentHashMap<Integer, String>> fdMap = new ConcurrentHashMap();
 
     public interface InotifyLibrary extends Library {
         InotifyLibrary INSTANCE = (InotifyLibrary) Native.load("c", InotifyLibrary.class);
@@ -254,7 +251,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
     }
 
     public static void close() {
-        for (Map.Entry<Integer, Map<Integer, String>> fdEntry : fdMap.entrySet()) {
+        for (Map.Entry<Integer, ConcurrentHashMap<Integer, String>> fdEntry : fdMap.entrySet()) {
             Integer fd = fdEntry.getKey();
             Map<Integer, String> wdMap = fdEntry.getValue();
             for (Map.Entry<Integer, String> entry : wdMap.entrySet()) {
@@ -273,7 +270,7 @@ IN_MOVE_SELF，自移动，即一个可执行文件在执行时移动自己
     static class Watch implements Runnable {
 
         private int fd;
-        private Map<Integer, String> wdMap = new HashMap<>();
+        private ConcurrentHashMap<Integer, String> wdMap = new ConcurrentHashMap<>();
         private List<String> paths;
         private static final int size = 4096;
         private static Long sId;

@@ -54,8 +54,6 @@ public class HomeController {
     @Autowired(required = false)
     private Es8Client es8Client;
 
-    @Value("${search.passwd}")
-    private String passwd;
     @Value("${search.urlOptions}")
     private String urlOptions;
 

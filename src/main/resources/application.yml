@@ -105,11 +105,10 @@ file:
 
 search:
   urlOptions: ${env.search.urlOptions}
-  passwd: ${env.search.passwd}
 
 watch:
-  open: true
-  rebuldFlag: true
+  open: false
+  rebuldFlag: false
   deleteLimit: 2000000
 
 transcode:
