@@ -1,14 +1,14 @@
 package com.asuala.mock.transcode;
 
-import cn.hutool.core.io.FileUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 /**
  * @description:
@@ -21,13 +21,16 @@ public class TranscodeService {
     @Value("${transcode.pyPath}")
     private String pyPath;
 
+    @Value("${transcode.pythonPath:python}")
+    private String pythonPath;
+
     private static boolean flag = true;
 
 
     public void ranscodeVideo(File file) throws IOException {
         log.info("{} 开始转码", file.getAbsolutePath());
 
-        ProcessBuilder processBuilder = new ProcessBuilder("python.exe", pyPath, file.getAbsolutePath());
+        ProcessBuilder processBuilder = new ProcessBuilder(pythonPath, pyPath, file.getAbsolutePath());
 //        Map<String, String> environment = processBuilder.environment();
         Process process = processBuilder.start();
 

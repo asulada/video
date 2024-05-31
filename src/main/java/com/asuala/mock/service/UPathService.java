@@ -1,12 +1,11 @@
 package com.asuala.mock.service;
 
+import com.asuala.mock.mapper.UPathMapper;
+import com.asuala.mock.vo.UPath;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.util.List;
-import com.asuala.mock.vo.UPath;
-import com.asuala.mock.mapper.UPathMapper;
 @Service
 public class UPathService{
 

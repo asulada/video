@@ -1,21 +1,15 @@
 package com.asuala.mock.config;
 
-import cn.dev33.satoken.context.SaHolder;
-import cn.dev33.satoken.context.model.SaRequest;
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.strategy.SaStrategy;
 import cn.dev33.satoken.util.SaFoxUtil;
-import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.util.Date;
 
 /**
  * @description:
@@ -47,7 +41,7 @@ public class SaTokenConfigure implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         // 注册 Sa-Token 拦截器，校验规则为 StpUtil.checkLogin() 登录校验。
         registry.addInterceptor(new SaInterceptor(handle -> {
-// 指定一条 match 规则
+            // 指定一条 match 规则
             SaRouter
                     .match("/**")    // 拦截的 path 列表，可以写多个 */
 //                    .notMatch("/user/doLogin")        // 排除掉的 path 列表，可以写多个

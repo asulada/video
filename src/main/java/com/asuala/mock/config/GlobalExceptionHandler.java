@@ -1,12 +1,11 @@
 package com.asuala.mock.config;
 
+import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.SaTokenException;
 import cn.dev33.satoken.util.SaResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.util.HashMap;
 
 /**
  * @description:
@@ -35,11 +34,18 @@ public class GlobalExceptionHandler {
             return SaResult.error("没有权限");
         }
         if (e.getCode() == 11011) {
+            log.error("token失效 请重新登录");
             return SaResult.code(11011);
         }
         // 更多 code 码判断 ...
 
         // 默认的提示
         return SaResult.error("服务器繁忙，请稍后重试...");
+    }
+
+    @ExceptionHandler(NotLoginException.class)
+    public SaResult handlerCheckException(NotLoginException e) {
+        log.error("校验token失败 {} {}", e.getCode(), e.getMessage());
+        return SaResult.code(11011);
     }
 }

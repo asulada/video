@@ -38,7 +38,7 @@ public class RecordService extends ServiceImpl<RecordMapper, Record> {
         record.setId(id);
         record.setFailNum(failNum);
         record.setUpdateTime(new Date());
-        if (failNum > 1) {
+        if (failNum > 2) {
             record.setState(RecordEnum.FORBID_DOWN.getCode());
         } else {
             record.setState(RecordEnum.PAUSE_DOWN.getCode());

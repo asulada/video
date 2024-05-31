@@ -1,10 +1,11 @@
 package com.asuala.mock.service;
 
+import com.asuala.mock.mapper.ChannelRepeatMapper;
+import com.asuala.mock.vo.ChannelRepeat;
 import org.springframework.stereotype.Service;
+
 import javax.annotation.Resource;
 import java.util.List;
-import com.asuala.mock.vo.ChannelRepeat;
-import com.asuala.mock.mapper.ChannelRepeatMapper;
 @Service
 public class ChannelRepeatService{
 

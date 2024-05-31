@@ -1,6 +1,8 @@
 package com.asuala.mock.task;
 
 import com.asuala.mock.enums.state.RecordEnum;
+import com.asuala.mock.service.IndexService;
+import com.asuala.mock.service.RecordPageService;
 import com.asuala.mock.service.RecordService;
 import com.asuala.mock.vo.Record;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +35,9 @@ public class TxtTask {
 
     private final RecordService recordService;
 
+    private final RecordPageService recordPageService;
+
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Value("${down.directory:'d:\\app\\'}")
     private String downDir;
@@ -56,6 +62,12 @@ public class TxtTask {
         if (txtIds.size() > 0) {
             recordService.update(new LambdaUpdateWrapper<Record>().set(Record::getState, RecordEnum.TXT_DOWNLOADED.getCode()).in(Record::getId, txtIds));
         }
+    }
+
+
+    @Scheduled(cron = "0 0 1 * * ?")
+    public void deleteComplete() {
+        recordPageService.deleteComplete();
     }
 
     private void buildNotxt(Record record) {

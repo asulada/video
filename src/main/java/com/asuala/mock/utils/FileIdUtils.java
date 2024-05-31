@@ -1,7 +1,5 @@
 package com.asuala.mock.utils;
 
-import com.asuala.mock.vo.Index;
-
 import java.security.MessageDigest;
 
 /**

@@ -1,12 +1,11 @@
 package com.asuala.mock.service;
 
-import org.springframework.stereotype.Service;
-
-import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.List;
 import com.asuala.mock.mapper.UserMapper;
 import com.asuala.mock.vo.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 @Service
 public class UserService{
 

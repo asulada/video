@@ -55,7 +55,7 @@ public class IndexService extends ServiceImpl<IndexMapper, Index> {
         return baseMapper.findByCpuId(cpuId);
     }
 
-    public void updateUpdateTimeById(long index) {
-        baseMapper.updateUpdateTimeById(new Date(), index);
-    }
+//    public void updateUpdateTimeById(long index) {
+//        baseMapper.updateUpdateTimeById(new Date(), index);
+//    }
 }

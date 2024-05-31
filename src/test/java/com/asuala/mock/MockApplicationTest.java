@@ -1,7 +1,6 @@
 package com.asuala.mock;
 
 import com.asuala.mock.mapper.RecordMapper;
-import com.asuala.mock.service.ServerService;
 import com.asuala.mock.transcode.TranscodeService;
 import com.asuala.mock.vo.Record;
 import com.asuala.mock.vo.req.RebuildReq;
@@ -42,9 +41,6 @@ public class MockApplicationTest {
 
     @Autowired
     private TranscodeService transcodeService;
-
-    @Autowired
-    private ServerService serverService;
 
     @Test
     public void init() {

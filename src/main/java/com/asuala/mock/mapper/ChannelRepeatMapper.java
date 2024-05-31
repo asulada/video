@@ -1,10 +1,10 @@
 package com.asuala.mock.mapper;
 
 import com.asuala.mock.vo.ChannelRepeat;
-import java.util.List;
-
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 public interface ChannelRepeatMapper extends BaseMapper<ChannelRepeat> {
     int deleteByPrimaryKey(Long id);

@@ -250,8 +250,8 @@ public class CommonTask {
         return false;
     }
 
-    @Scheduled(cron = "0 0/20 * * * ?")
-    public void exsit() {
-        indexService.updateUpdateTimeById(Constant.index);
-    }
+//    @Scheduled(cron = "0 0/20 * * * ?")
+//    public void exsit() {
+//        indexService.updateUpdateTimeById(Constant.index);
+//    }
 }

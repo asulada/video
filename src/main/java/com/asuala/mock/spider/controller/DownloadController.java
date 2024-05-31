@@ -1,70 +1,48 @@
-package com.asuala.mock.search;
+package com.asuala.mock.spider.controller;
 
 import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.util.SaResult;
-import cn.hutool.core.util.IdUtil;
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.TermsQueryField;
 import com.alibaba.fastjson2.JSONObject;
-import com.asuala.mock.config.MainConstant;
 import com.asuala.mock.enums.state.RecordEnum;
-import com.asuala.mock.es.Es8Client;
-import com.asuala.mock.es.entity.FileInfoEs;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.mapper.UserMapper;
-import com.asuala.mock.service.FileInfoService;
 import com.asuala.mock.service.RecordService;
 import com.asuala.mock.utils.TimeUtils;
-import com.asuala.mock.vo.FileInfo;
 import com.asuala.mock.vo.Record;
 import com.asuala.mock.vo.User;
-import com.asuala.mock.vo.req.SearchReq;
 import com.asuala.mock.vo.req.UrlReq;
+import com.asuala.mock.vo.req.UserReq;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.io.InputStreamReader;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @description:
- * @create: 2024/05/25
+ * @create: 2024/05/31
  **/
-@Controller
+@RestController
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "file", name = "server.open", havingValue = "true")
-public class HomeController {
+public class DownloadController {
+
     private final RecordService recordService;
-    private final FileInfoService fileInfoService;
     private final UserMapper userMapper;
-    @Autowired(required = false)
-    private Es8Client es8Client;
 
     @Value("${search.urlOptions}")
     private String urlOptions;
-
-    private static final List<String> fields = new ArrayList<String>() {{
-        add("name");
-    }};
-
-    @RequestMapping("/")
-    public String index() {
-        return "index.html";
-    }
 
     @RequestMapping("login")
     @ResponseBody
@@ -89,46 +67,65 @@ public class HomeController {
         return SaResult.ok();
     }
 
-
-    @PostMapping("search")
-    @ResponseBody
-    public JSONObject search(@RequestBody SearchReq req) throws IOException {
+    @PostMapping("analysis")
+    public JSONObject analysis(@RequestBody UrlReq req) {
         JSONObject res = new JSONObject();
         res.put("code", 222);
+        if (StringUtils.isBlank(req.getUrl())) {
+            res.put("msg", "解析地址为空");
+        } else {
+            try {
+                String cmd = "you-get -x 127.0.0.1:7890 -i " + req.getUrl();
+                // 执行命令
+                Process process = Runtime.getRuntime().exec(cmd);
 
-        if (StringUtils.isBlank(req.getKey())) {
-            res.put("msg", "关键字为空");
+                // 读取命令执行结果
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                StringBuilder output = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+                log.info("打印命令执行结果 {}", output.toString());
+                int exitVal = process.waitFor();
+                log.info("获取命令执行返回值 {}", exitVal);
+            } catch (IOException | InterruptedException e) {
+                log.error("解析地址失败", e);
+                res.put("msg", "解析地址失败");
+            }
+        }
+        return res;
+    }
+
+    @PostMapping("repeat")
+    public JSONObject repeat(@RequestBody UrlReq req) {
+        JSONObject res = new JSONObject();
+        res.put("code", 222);
+        if (StringUtils.isBlank(req.getFileName())) {
+            res.put("msg", "名称为空");
             return res;
         }
-        Set<Long> fileIds = MainConstant.userResource.get(StpUtil.getLoginIdAsLong());
-        if (CollectionUtils.isEmpty(fileIds)) {
-            res.put("msg", "没有权限");
+        if (StringUtils.isBlank(req.getAuthor())) {
+            res.put("msg", "作者为空");
             return res;
         }
-        Page<FileInfo> page = new Page<>(req.getPageNum(), req.getPageSize());
-        List<FileInfo> list = fileInfoService.list(page, new LambdaQueryWrapper<FileInfo>().in(FileInfo::getUId, fileIds).likeRight(FileInfo::getName, req.getKey()).orderByDesc(FileInfo::getChangeTime));
+        req.setFileName(req.getFileName().trim());
+
+        List<String> list = recordService.findQualityByAuthorAndName(req.getAuthor(), req.getFileName());
         if (list.size() > 0) {
-            Map<String, Object> result = new HashMap<>();
-            result.put("list", list);
-            result.put("total", page.getTotal());
-            res.put("data", result);
-            res.put("code", 200);
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append("已有");
+            for (String record : list) {
+                stringBuilder.append(" ").append(record);
+            }
+            stringBuilder.append(" 任务");
+            res.put("msg", stringBuilder.toString());
             return res;
         }
-//        Query query = Query.of(q -> q.wildcard(w -> w.field("name").value(key)));
-//        Query query = Query.of(q -> q.matchPhrase(m -> m.query(req.getKey()).field("name").slop(6)));
-        Query query = Query.of(q -> q.bool(b -> b.must(mustQuery -> mustQuery.terms(t -> t
-                .field("sId")
-                .terms(TermsQueryField.of(tf -> tf
-                        .value(fileIds.stream().map(item -> FieldValue.of(item)).collect(Collectors.toList()))  // Replace with actual terms
-                )))).
-                must(mustQuery -> mustQuery.matchPhrase(m -> m.query(req.getKey()).field("name").slop(6)))));
-//        Query query = Query.of(q -> q.match(m -> m.query(key).field("name")));
-        Map<String, Object> map = es8Client.complexQueryHighlight(query, FileInfoEs.class, fields, req.getPageNum(), req.getPageSize());
-        res.put("data", map);
         res.put("code", 200);
         return res;
     }
+
 
     @PostMapping("down")
     public JSONObject down(@RequestBody UrlReq req) {
@@ -159,7 +156,7 @@ public class HomeController {
             res.put("msg", "图片为空");
             return res;
         }
-//        File file = new File(downDir + req.getAuthor() + Constant.FILESEPARATOR +"+ req.getFileName() + ".mp4");
+//        File file = new File(downDir + req.getAuthor() + MainConstant.FILESEPARATOR +"+ req.getFileName() + ".mp4");
 //        if (file.exists()) {
 //            res.put("msg", "文件已存在");
 //            return res;
@@ -239,8 +236,8 @@ public class HomeController {
 
     @GetMapping("openUrl")
     @ResponseBody
-
     public JSONObject openUrl() {
         return JSONObject.parseObject(urlOptions);
     }
+
 }

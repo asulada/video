@@ -1,5 +1,5 @@
 server:
-  port: 7082
+  port: 7083
 
 spring:
   jackson:
@@ -94,32 +94,11 @@ down:
   search:
     pageSize: 60
 
-file:
-  server:
-    open: true
-    http:
-      salt: ${env.down.http.salt}
-      addUrl: ${env.down.http.url}/saveEs
-      delUrl: ${env.down.http.url}/delEs
-      rebuildUrl: ${env.down.http.url}/rebuildData
-
-search:
-  urlOptions: ${env.search.urlOptions}
-
-watch:
-  open: false
-  rebuldFlag: false
-  deleteLimit: 2000000
-
 transcode:
   pyPath: ${env.transcode.pyPath}
 
-es:
-  port: ${env.es.port}
-  hostname: ${env.es.hostname}
-  alals: true  # 是否使用别名的方式访问
-  indexPrefix: index-
-  aliasPrefix: alias-
+search:
+  urlOptions: ${env.search.urlOptions}
 
 ############## Sa-Token 配置 (文档: https://sa-token.cc) ##############
 sa-token:

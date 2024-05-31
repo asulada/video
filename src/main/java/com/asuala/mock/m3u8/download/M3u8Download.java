@@ -1,6 +1,5 @@
 package com.asuala.mock.m3u8.download;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.asuala.mock.m3u8.Exception.M3u8Exception;
 import com.asuala.mock.m3u8.utils.Constant;
 import com.asuala.mock.m3u8.utils.MediaFormat;
@@ -10,9 +9,8 @@ import com.asuala.mock.service.RecordService;
 import com.asuala.mock.task.CommonTask;
 import com.asuala.mock.transcode.TranscodeService;
 import com.asuala.mock.utils.CacheUtils;
-import com.asuala.mock.vo.FixedLengthQueue;
 import com.asuala.mock.vo.RecordPage;
-import com.asuala.mock.websocket.HttpAuthHandler;
+//import com.asuala.mock.websocket.HttpAuthHandler;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -34,7 +32,10 @@ import java.security.Security;
 import java.security.spec.AlgorithmParameterSpec;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.asuala.mock.m3u8.utils.Constant.*;
@@ -294,7 +295,7 @@ public class M3u8Download {
                     try {
                         transcodeService.ranscodeVideo(video);
                     } catch (Exception e) {
-                        error("转码失败");
+                        error("转码失败", e);
                     }
 
                     CacheUtils.transcodeAtomic.set(false);
@@ -302,6 +303,7 @@ public class M3u8Download {
 
                 } else if (failCount.get() > 0) {
                     error("ts片段下载失败");
+                    CacheUtils.downFlag(LocalDateTime.now());
                     recordService.pauseRecord(id, fileName, failNum);
                     stopDown();
                 } else if (stopFlag) {
@@ -623,19 +625,19 @@ public class M3u8Download {
     }
 
 
-    public void sendMsg(String msg, FixedLengthQueue queue) {
-        for (int i = 0; i < queue.list().length; i++) {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("code", 222);
-            jsonObject.put("msg", msg);
-            try {
-                HttpAuthHandler.sendMessage(queue.list()[i], jsonObject);
-            } catch (Exception e) {
-                error("发送信息失败: {} -- {}", msg, e.getMessage());
-                queue.remove(i);
-            }
-        }
-    }
+//    public void sendMsg(String msg, FixedLengthQueue queue) {
+//        for (int i = 0; i < queue.list().length; i++) {
+//            JSONObject jsonObject = new JSONObject();
+//            jsonObject.put("code", 222);
+//            jsonObject.put("msg", msg);
+//            try {
+//                HttpAuthHandler.sendMessage(queue.list()[i], jsonObject);
+//            } catch (Exception e) {
+//                error("发送信息失败: {} -- {}", msg, e.getMessage());
+//                queue.remove(i);
+//            }
+//        }
+//    }
 
     /**
      * 获取所有的ts片段下载链接

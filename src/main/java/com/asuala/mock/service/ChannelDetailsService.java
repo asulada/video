@@ -1,10 +1,11 @@
 package com.asuala.mock.service;
 
+import com.asuala.mock.mapper.ChannelDetailsMapper;
+import com.asuala.mock.vo.ChannelDetails;
 import org.springframework.stereotype.Service;
+
 import javax.annotation.Resource;
 import java.util.List;
-import com.asuala.mock.vo.ChannelDetails;
-import com.asuala.mock.mapper.ChannelDetailsMapper;
 @Service
 public class ChannelDetailsService{
 

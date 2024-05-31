@@ -1,6 +1,5 @@
 package com.asuala.mock.enums.state;
 
-import com.sun.jna.platform.FileMonitor;
 import lombok.Getter;
 
 /**
